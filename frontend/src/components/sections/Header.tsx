@@ -60,10 +60,15 @@ export default function Header() {
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <button className="btn-tg px-6 py-2.5 text-sm shadow-md shadow-tg-blue/10">
+            <a 
+              href="https://t.me/ar_semenov23" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="btn-tg px-6 py-2.5 text-sm shadow-md shadow-tg-blue/10 flex items-center gap-2"
+            >
               <Send className="w-4 h-4 -rotate-12" />
               Обсудить проект
-            </button>
+            </a>
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -96,10 +101,15 @@ export default function Header() {
                   {link.name}
                 </Link>
               ))}
-              <button className="btn-tg w-full py-4 text-base">
+              <a 
+                href="https://t.me/ar_semenov23"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-tg w-full py-4 text-base flex items-center justify-center gap-2"
+              >
                 <Send className="w-5 h-5 -rotate-12" />
                 Обсудить проект
-              </button>
+              </a>
             </div>
           </motion.div>
         )}

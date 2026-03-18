@@ -19,22 +19,34 @@ type FormData = z.infer<typeof formSchema>
 export default function Contact() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(formSchema)
+  const { register, handleSubmit, reset, watch, formState: { errors, isValid } } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    mode: 'onChange'
   })
 
+  const formValues = watch()
+
   const onSubmit = async (data: FormData) => {
-    setStatus('loading')
-    try {
-      await axios.post('http://localhost:3001/leads', data)
-      setStatus('success')
-      reset()
-      setTimeout(() => setStatus('idle'), 5000)
-    } catch (error) {
-      console.error(error)
-      setStatus('error')
-      setTimeout(() => setStatus('idle'), 5000)
-    }
+    // Construct the Telegram message
+    const message = `
+👋 Новая заявка с сайта!
+
+👤 Имя: ${data.name}
+📱 Telegram: ${data.telegram}
+📝 Задача:
+${data.project}
+    `.trim()
+
+    // Encode the message for the URL
+    const encodedMessage = encodeURIComponent(message)
+    
+    // Redirect to Telegram with the pre-filled message
+    window.open(`https://t.me/ar_semenov23?text=${encodedMessage}`, '_blank')
+    
+    // Reset form
+    reset()
+    setStatus('success')
+    setTimeout(() => setStatus('idle'), 3000)
   }
 
   return (
@@ -128,27 +140,18 @@ export default function Contact() {
 
                 <button
                   type="submit"
-                  disabled={status === 'loading' || status === 'success'}
+                  disabled={!isValid || status === 'loading' || status === 'success'}
                   className={`w-full py-5 rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 ${
                     status === 'success' 
                       ? 'bg-emerald-500 text-white cursor-default' 
                       : 'btn-tg hover:shadow-xl hover:shadow-tg-blue/20 active:scale-[0.98]'
-                  } disabled:opacity-70 disabled:cursor-not-allowed`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {status === 'loading' ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    >
-                      <Zap className="w-6 h-6" />
-                    </motion.div>
-                  ) : status === 'success' ? (
+                  {status === 'success' ? (
                     <>
                       <Check className="w-6 h-6" />
                       Отправлено!
                     </>
-                  ) : status === 'error' ? (
-                    'Ошибка. Попробуйте снова'
                   ) : (
                     <>
                       <Send className="w-6 h-6 -rotate-12" />

@@ -13,7 +13,7 @@ const services = [
       'Готовое решение за 3-7 дней',
       'Нативный, вписывается в мессенджер',
       'Гибкая настройка под задачи',
-      'От 50 000 ₽',
+      'от 10 000',
     ],
     buttonText: 'Заказать',
     isPopular: false,
@@ -26,7 +26,7 @@ const services = [
       'Отдельное приложение внутри Telegram',
       'Идеально для большого функционала',
       'Без ограничений по дизайну',
-      'От 100 000 ₽ и 3 дней',
+      'От 30 000 ₽ и 3 дней',
     ],
     buttonText: 'Заказать',
     isPopular: true,
@@ -39,7 +39,7 @@ const services = [
       '24/7 мониторинг',
       'Быстрое реагирование на критические ситуации',
       'Регулярные обновления',
-      'От 10 000 ₽ в месяц',
+      'От 5 000 ₽ в месяц',
     ],
     buttonText: 'Заказать',
     isPopular: false,
@@ -130,8 +130,11 @@ export default function Services() {
                   ))}
                 </div>
 
-                <button 
-                  className={`w-full py-4 rounded-2xl font-black transition-all shadow-sm active:scale-[0.98] ${
+                <a 
+                  href="https://t.me/ar_semenov23"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`w-full py-4 rounded-2xl font-black transition-all shadow-sm active:scale-[0.98] flex items-center justify-center ${
                     service.isPopular 
                       ? 'bg-tg-blue text-white hover:bg-tg-blue/90 hover:shadow-lg hover:shadow-tg-blue/20' 
                       : 'bg-slate-50 text-[#222222] hover:bg-slate-100'
@@ -139,7 +142,7 @@ export default function Services() {
                   style={{ transform: 'translateZ(40px)' }}
                 >
                   {service.buttonText}
-                </button>
+                </a>
               </motion.div>
             </TiltCard>
           ))}
