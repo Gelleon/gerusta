@@ -6,7 +6,6 @@ import { Send, Check, MessageCircle, Bot, Zap, Shield } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import axios from 'axios'
 
 const formSchema = z.object({
   name: z.string().min(2, 'Минимум 2 символа'),
@@ -19,12 +18,10 @@ type FormData = z.infer<typeof formSchema>
 export default function Contact() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   
-  const { register, handleSubmit, reset, watch, formState: { errors, isValid } } = useForm<FormData>({
+  const { register, handleSubmit, reset, formState: { errors, isValid } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     mode: 'onChange'
   })
-
-  const formValues = watch()
 
   const onSubmit = async (data: FormData) => {
     // Construct the Telegram message

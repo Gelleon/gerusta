@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
   Save, 
-  Send, 
   Sparkles, 
   Image as ImageIcon, 
   ArrowLeft,
@@ -15,7 +15,6 @@ import {
   Plus,
   Trash2,
   History,
-  Search,
   Eye,
   Settings2,
   X,
@@ -91,6 +90,38 @@ interface Category {
   name: string;
 }
 
+interface PostTag {
+  name: string;
+}
+
+interface PostVersion {
+  id: string;
+  createdAt: string;
+  title: string;
+  content: string;
+}
+
+interface PostData {
+  id: string;
+  title: string;
+  slug?: string;
+  excerpt?: string;
+  content: string;
+  categoryId?: string;
+  featuredImage?: string;
+  published: boolean;
+  updatedAt?: string;
+  views?: number;
+  tags?: PostTag[];
+  _count?: {
+    comments?: number;
+  };
+  scheduledAt?: string | null;
+  metaTitle?: string;
+  metaDescription?: string;
+  versions?: PostVersion[];
+}
+
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const { t } = useTranslation();
@@ -100,22 +131,10 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   const [isGenerating, setIsGenerating] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<PostData | null>(null);
 
   const form = useForm<PostFormValues>({
-    resolver: zodResolver(z.object({
-      title: z.string().min(5, t('posts.title_min_length')),
-      slug: z.string().optional(),
-      excerpt: z.string().optional(),
-      content: z.string().min(20, t('posts.content_min_length')),
-      categoryId: z.string().min(1, t('posts.category_required')),
-      featuredImage: z.string().optional(),
-      published: z.boolean(),
-      tags: z.array(z.string()),
-      scheduledAt: z.string().optional().nullable(),
-      metaTitle: z.string().optional(),
-      metaDescription: z.string().optional(),
-    })),
+    resolver: zodResolver(postSchema),
     defaultValues: {
       title: '',
       slug: '',
@@ -134,6 +153,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   const { handleSubmit, reset, setValue, watch } = form;
 
   const selectedTags = watch('tags');
+  const versions = post?.versions ?? [];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,7 +175,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           categoryId: postRes.data.categoryId || undefined,
           featuredImage: postRes.data.featuredImage || '',
           published: postRes.data.published,
-          tags: postRes.data.tags?.map((t: any) => t.name) || [],
+          tags: postRes.data.tags?.map((t: PostTag) => t.name) || [],
           scheduledAt: postRes.data.scheduledAt ? new Date(postRes.data.scheduledAt).toISOString().slice(0, 16) : null,
           metaTitle: postRes.data.metaTitle || '',
           metaDescription: postRes.data.metaDescription || '',
@@ -560,9 +580,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                       <CardDescription>{t('posts.revision_history_desc', 'Restore previous versions of your post.')}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8">
-                      {post?.versions && post.versions.length > 0 ? (
+                      {versions.length > 0 ? (
                         <div className="grid gap-4">
-                          {post.versions.map((version: any, idx: number) => (
+                          {versions.map((version: PostVersion, idx: number) => (
                             <div key={version.id} className="flex items-center justify-between p-5 rounded-[24px] bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-md hover:border-indigo-100 transition-all group">
                               <div className="flex items-center gap-4">
                                 <div className="h-10 w-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-indigo-500 shadow-sm group-hover:bg-indigo-50 transition-colors">
@@ -573,7 +593,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                                     {new Date(version.createdAt).toLocaleDateString()} at {new Date(version.createdAt).toLocaleTimeString()}
                                   </p>
                                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                    {idx === post.versions.length - 1 ? t('posts.original_version', 'Initial Version') : `${t('posts.version', 'Version')} ${post.versions.length - idx}`}
+                                    {idx === versions.length - 1 ? t('posts.original_version', 'Initial Version') : `${t('posts.version', 'Version')} ${versions.length - idx}`}
                                   </p>
                                 </div>
                               </div>
@@ -693,8 +713,12 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           <div className="aspect-video relative rounded-3xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-white hover:border-indigo-200 transition-all overflow-hidden group shadow-inner">
                             {field.value ? (
                               <>
-                                <img 
+                                <Image
                                   src={getImageUrl(field.value)} 
+                                  width={1280}
+                                  height={720}
+                                  sizes="(max-width: 1024px) 100vw, 33vw"
+                                  unoptimized
                                   alt="Featured" 
                                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                 />

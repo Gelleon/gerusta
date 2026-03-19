@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { motion, useSpring, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
+import { motion, useSpring, useMotionValue, useTransform } from 'framer-motion'
 
 /**
  * Wow3DCard Component Documentation

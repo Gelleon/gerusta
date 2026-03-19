@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { AxiosError } from 'axios';
 import { 
   User as UserIcon, 
   Mail, 
   Lock, 
   Shield, 
   Bell, 
-  Globe, 
   Palette,
   Save,
   Loader2,
@@ -27,11 +27,14 @@ import {
   CardFooter 
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useAuthStore } from '@/store/auth-store';
 import apiClient from '@/lib/api-client';
+
+type ApiErrorData = {
+  message?: string;
+};
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -66,8 +69,9 @@ export default function SettingsPage() {
       });
       setUser(response.data);
       toast.success(t('settings.profile_updated'));
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || t('settings.update_profile_failed'));
+    } catch (error: unknown) {
+      const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
+      toast.error(errorMessage || t('settings.update_profile_failed'));
     } finally {
       setIsSaving(false);
     }
@@ -92,8 +96,9 @@ export default function SettingsPage() {
         newPassword: '',
         confirmPassword: ''
       }));
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || t('settings.update_password_failed'));
+    } catch (error: unknown) {
+      const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
+      toast.error(errorMessage || t('settings.update_password_failed'));
     } finally {
       setIsSaving(false);
     }

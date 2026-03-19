@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 import { 
   Plus, 
@@ -35,7 +36,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import apiClient from '@/lib/api-client';
 
@@ -48,6 +48,10 @@ interface Category {
   };
 }
 
+type ApiErrorData = {
+  message?: string;
+};
+
 export default function CategoriesPage() {
   const { t } = useTranslation();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -58,11 +62,7 @@ export default function CategoriesPage() {
   const [currentCategory, setCurrentCategory] = useState<Partial<Category>>({ name: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await apiClient.get('/blog/categories');
@@ -74,7 +74,11 @@ export default function CategoriesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    void fetchCategories();
+  }, [fetchCategories]);
 
   const filteredCategories = Array.isArray(categories) ? categories.filter(category => 
     category.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -97,10 +101,11 @@ export default function CategoriesPage() {
         toast.success(t('categories.create_success'));
       }
       setIsDialogOpen(false);
-      fetchCategories();
-    } catch (error: any) {
+      void fetchCategories();
+    } catch (error: unknown) {
+      const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
       console.error('Error saving category:', error);
-      toast.error(error.response?.data?.message || t('categories.save_failed'));
+      toast.error(errorMessage || t('categories.save_failed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -112,10 +117,11 @@ export default function CategoriesPage() {
     try {
       await apiClient.delete(`/blog/categories/${id}`);
       toast.success(t('categories.delete_success'));
-      fetchCategories();
-    } catch (error: any) {
+      void fetchCategories();
+    } catch (error: unknown) {
+      const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
       console.error('Error deleting category:', error);
-      toast.error(error.response?.data?.message || t('categories.delete_failed'));
+      toast.error(errorMessage || t('categories.delete_failed'));
     }
   };
 

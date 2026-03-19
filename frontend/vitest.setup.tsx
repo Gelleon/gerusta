@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import type { ComponentProps, ReactNode } from 'react'
 import { vi } from 'vitest'
 
 // Mock next/navigation
@@ -14,11 +15,11 @@ vi.mock('next/navigation', () => ({
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    header: ({ children, ...props }: any) => <header {...props}>{children}</header>,
-    nav: ({ children, ...props }: any) => <nav {...props}>{children}</nav>,
+    div: ({ children, ...props }: ComponentProps<'div'> & { children?: ReactNode }) => <div {...props}>{children}</div>,
+    header: ({ children, ...props }: ComponentProps<'header'> & { children?: ReactNode }) => <header {...props}>{children}</header>,
+    nav: ({ children, ...props }: ComponentProps<'nav'> & { children?: ReactNode }) => <nav {...props}>{children}</nav>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>
+  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>
 }))
 
 // Mock window.matchMedia for sonner
@@ -37,17 +38,19 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 // Mock lucide-react icons
-vi.mock('lucide-react', async (importOriginal) => {
-  const actual = await importOriginal<any>();
-  const mockIcons: any = {};
-  
-  // Create a proxy to handle any icon name requested
+vi.mock('lucide-react', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('lucide-react')
+
   return new Proxy(actual, {
-    get: (target, prop: string) => {
-      if (prop.endsWith('Icon') || /^[A-Z]/.test(prop)) {
-        return (props: any) => <div data-testid={`icon-${prop.toLowerCase()}`} {...props} />;
+    get: (target, prop: string | symbol) => {
+      if (typeof prop === 'string' && (prop.endsWith('Icon') || /^[A-Z]/.test(prop))) {
+        const IconMock = (props: ComponentProps<'div'>) => (
+          <div data-testid={`icon-${prop.toLowerCase()}`} {...props} />
+        )
+        IconMock.displayName = `${prop}Mock`
+        return IconMock
       }
-      return target[prop];
+      return target[prop as keyof typeof target]
     },
-  });
-});
+  })
+})

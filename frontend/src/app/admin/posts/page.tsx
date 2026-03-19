@@ -1,19 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { 
   Plus, 
   Search, 
   Filter, 
-  MoreVertical, 
   Edit, 
   Trash2, 
   Eye, 
-  CheckCircle2, 
-  Circle,
   FileText,
-  Clock,
   ExternalLink,
   Download,
   Upload,
@@ -30,18 +26,8 @@ import {
   Card, 
   CardContent, 
   CardHeader, 
-  CardTitle, 
-  CardDescription 
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import apiClient from '@/lib/api-client';
 
 interface Post {
@@ -64,11 +50,7 @@ export default function PostsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await apiClient.get('/blog/admin/posts');
@@ -87,7 +69,11 @@ export default function PostsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    void fetchPosts();
+  }, [fetchPosts]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -101,7 +87,7 @@ export default function PostsPage() {
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
       toast.success(t('posts.export_success'));
-    } catch (error) {
+    } catch {
       toast.error(t('posts.export_failed'));
     } finally {
       setIsExporting(false);
@@ -120,7 +106,7 @@ export default function PostsPage() {
         const res = await apiClient.post('/blog/import/json', json);
         toast.success(t('posts.import_success', { count: res.data.count, total: res.data.total }));
         fetchPosts();
-      } catch (error) {
+      } catch {
         toast.error(t('posts.import_failed'));
       } finally {
         setIsImporting(false);

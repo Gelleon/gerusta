@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -65,18 +66,7 @@ export default function NewPostPage() {
   const [tagInput, setTagInput] = useState('');
 
   const form = useForm<PostFormValues>({
-    resolver: zodResolver(z.object({
-      title: z.string().min(5, t('posts.title_min_length')),
-      excerpt: z.string().optional(),
-      content: z.string().min(20, t('posts.content_min_length')),
-      categoryId: z.string().min(1, t('posts.category_required')),
-      featuredImage: z.string().optional(),
-      published: z.boolean(),
-      tags: z.array(z.string()),
-      scheduledAt: z.string().optional().nullable(),
-      metaTitle: z.string().optional(),
-      metaDescription: z.string().optional(),
-    })),
+    resolver: zodResolver(postSchema),
     defaultValues: {
       title: '',
       content: '',
@@ -388,8 +378,12 @@ export default function NewPostPage() {
 
                           {form.watch('featuredImage') && (
                             <div className="mb-12 rounded-3xl overflow-hidden shadow-xl ring-1 ring-slate-200">
-                              <img 
+                              <Image
                                 src={getImageUrl(form.watch('featuredImage'))} 
+                                width={1600}
+                                height={686}
+                                sizes="(max-width: 1024px) 100vw, 1600px"
+                                unoptimized
                                 alt="Featured" 
                                 className="w-full aspect-[21/9] object-cover" 
                               />
@@ -439,8 +433,12 @@ export default function NewPostPage() {
                     <div className="aspect-video relative rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-50 hover:border-indigo-200 transition-all overflow-hidden group">
                       {form.watch('featuredImage') ? (
                         <>
-                          <img 
+                          <Image
                             src={getImageUrl(form.watch('featuredImage'))} 
+                            width={1280}
+                            height={720}
+                            sizes="(max-width: 1024px) 100vw, 33vw"
+                            unoptimized
                             alt="Preview" 
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />

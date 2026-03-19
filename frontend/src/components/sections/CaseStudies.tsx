@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ExternalLink, ArrowRight, TrendingUp, Users, Target } from 'lucide-react'
+import { ArrowRight, TrendingUp } from 'lucide-react'
 
 const cases = [
   {
@@ -55,14 +56,15 @@ export default function CaseStudies() {
               расти и автоматизировать рутинные процессы.
             </motion.p>
           </div>
-          <motion.button 
+          <motion.div 
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="flex items-center gap-2 text-tg-blue font-black hover:gap-3 transition-all uppercase tracking-widest text-sm"
           >
-            Все проекты <ArrowRight className="w-5 h-5" />
-          </motion.button>
+            <Link href="/cases" className="flex items-center gap-2 text-tg-blue font-black hover:gap-3 transition-all uppercase tracking-widest text-sm">
+              Все проекты <ArrowRight className="w-5 h-5" />
+            </Link>
+          </motion.div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -75,7 +77,6 @@ export default function CaseStudies() {
               transition={{ delay: index * 0.1 }}
               className="sky-card group overflow-hidden rounded-3xl"
             >
-              {/* Mockup Image Area */}
               <div className={`h-64 ${project.image} relative flex items-center justify-center p-8`}>
                 <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
                 <div className="w-full h-full bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 flex items-center justify-center text-white font-bold text-2xl shadow-xl">

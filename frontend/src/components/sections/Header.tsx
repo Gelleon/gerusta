@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Send, Bot } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 
 const navLinks = [
   { name: 'Услуги', href: '/#services' },
@@ -16,7 +15,6 @@ const navLinks = [
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const pathname = usePathname()
 
   useEffect(() => {
     const handleScroll = () => {

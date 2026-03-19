@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Bot, Zap, ArrowRight, Loader2, ImageIcon } from "lucide-react";
+import { Bot, Zap, ArrowRight, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wow3DCard } from "@/components/ui/3d/Wow3DCard";
 import { getImageUrl } from "@/lib/utils";
@@ -14,6 +15,25 @@ type Post = {
   featuredImage?: string;
   date: string;
   tags: string[];
+};
+
+type ApiTag = {
+  name: string;
+};
+
+type ApiPost = {
+  slug: string;
+  title: string;
+  excerpt?: string;
+  content?: string;
+  featuredImage?: string;
+  createdAt: string;
+  tags?: ApiTag[];
+};
+
+type ApiPostsResponse = {
+  posts?: ApiPost[];
+  total?: number;
 };
 
 interface PostListProps {
@@ -50,7 +70,7 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
     }
   }, [q, initialPosts, initialTotal]);
 
-  const fetchMorePosts = async () => {
+  const fetchMorePosts = useCallback(async () => {
     if (isLoading || !hasMore || q) return;
 
     setIsLoading(true);
@@ -58,24 +78,28 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
       const take = 6;
       const res = await fetch(`${API_URL}/blog/posts?skip=${skip}&take=${take}`);
       if (res.ok) {
-        const data = await res.json();
+        const data: ApiPostsResponse | ApiPost[] = await res.json();
         // The backend returns { posts: Post[], total: number }
-        const apiPosts = Array.isArray(data.posts) ? data.posts : (Array.isArray(data) ? data : []);
+        const apiPosts: ApiPost[] = Array.isArray((data as ApiPostsResponse).posts)
+          ? (data as ApiPostsResponse).posts ?? []
+          : (Array.isArray(data) ? data : []);
         
-        const newPosts = apiPosts.map((p: any) => ({
+        const newPosts = apiPosts.map((p) => ({
           slug: p.slug,
           title: p.title,
-          description: p.excerpt || p.content.slice(0, 160),
+          description: p.excerpt || p.content?.slice(0, 160) || '',
           featuredImage: p.featuredImage,
           date: p.createdAt,
-          tags: (p.tags || []).map((t: any) => t.name),
+          tags: (p.tags || []).map((t) => t.name),
         }));
 
         if (newPosts.length > 0) {
           setPosts((prev) => [...prev, ...newPosts]);
           setSkip((prev) => prev + newPosts.length);
-          const totalCount = typeof data.total === 'number' ? data.total : (Array.isArray(data) ? data.length : 0);
-          setHasMore(skip + newPosts.length < totalCount);
+          const totalCount: number = typeof (data as ApiPostsResponse).total === 'number'
+            ? (data as ApiPostsResponse).total ?? 0
+            : (Array.isArray(data) ? data.length : 0);
+          setHasMore((prevHasMore) => prevHasMore && skip + newPosts.length < totalCount);
         } else {
           setHasMore(false);
         }
@@ -85,7 +109,7 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [API_URL, hasMore, isLoading, q, skip]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -102,7 +126,7 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
     }
 
     return () => observer.disconnect();
-  }, [hasMore, isLoading, skip, q]);
+  }, [fetchMorePosts, hasMore, isLoading, q]);
 
   return (
     <div className="space-y-12">
@@ -118,8 +142,12 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
               <article className="tg-card border border-slate-100 overflow-hidden h-full">
                 <div className="h-64 bg-gradient-to-br from-tg-blue/5 to-[#24A1DE]/5 relative overflow-hidden" style={{ transformStyle: 'preserve-3d' }}>
                   {p.featuredImage ? (
-                    <img 
+                    <Image
                       src={getImageUrl(p.featuredImage)} 
+                      width={1200}
+                      height={686}
+                      sizes="(max-width: 768px) 100vw, 1200px"
+                      unoptimized
                       alt={p.title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />

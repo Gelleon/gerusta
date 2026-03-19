@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import type { ComponentType } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -10,7 +11,6 @@ import {
   Settings, 
   LogOut, 
   Menu, 
-  X,
   User as UserIcon,
   Home,
   MessageSquare,
@@ -23,7 +23,6 @@ import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,59 +36,44 @@ import {
 } from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/sonner';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, logout } = useAuthStore();
-  const { t, i18n } = useTranslation();
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isMounted, setIsMounted] = useState(false);
+type NavItem = {
+  name: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+};
 
-  const navItems = [
-    { name: t('common.dashboard'), href: '/admin', icon: LayoutDashboard },
-    { name: t('common.posts'), href: '/admin/posts', icon: FileText },
-    { name: t('common.new_post'), href: '/admin/posts/new', icon: PlusSquare },
-    { name: t('common.categories'), href: '/admin/categories', icon: FolderOpen },
-    { name: t('common.tags'), href: '/admin/tags', icon: Tags },
-    { name: t('common.comments'), href: '/admin/comments', icon: MessageSquare },
-    { name: t('common.statistics'), href: '/admin/stats', icon: BarChart3 },
-    { name: t('common.settings'), href: '/admin/settings', icon: Settings },
-  ];
+type Language = {
+  code: string;
+  name: string;
+  flag: string;
+};
 
-  const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-  ];
+interface AdminSidebarProps {
+  t: (key: string) => string;
+  i18nLanguage: string;
+  navItems: NavItem[];
+  pathname: string;
+  languages: Language[];
+  currentLanguage: Language;
+  onChangeLanguage: (code: string) => void;
+  onLogout: () => void;
+  userName?: string;
+  userRole?: string;
+}
 
-  const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0];
-
-  const changeLanguage = (code: string) => {
-    i18n.changeLanguage(code);
-  };
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (isMounted && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isMounted, isAuthenticated, router]);
-
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
-
-  if (!isMounted || !isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
-      </div>
-    );
-  }
-
-  const Sidebar = () => (
+function AdminSidebar({
+  t,
+  i18nLanguage,
+  navItems,
+  pathname,
+  languages,
+  currentLanguage,
+  onChangeLanguage,
+  onLogout,
+  userName,
+  userRole,
+}: AdminSidebarProps) {
+  return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 w-64 fixed left-0 top-0 overflow-y-auto border-r border-slate-800/50 shadow-2xl">
       <div className="p-8">
         <h1 className="text-2xl font-black tracking-tighter flex items-center gap-3">
@@ -118,8 +102,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {languages.map((lang) => (
                 <DropdownMenuItem 
                   key={lang.code}
-                  onClick={() => changeLanguage(lang.code)}
-                  className={`flex items-center gap-2 cursor-pointer focus:bg-slate-800 focus:text-white px-3 py-2 ${i18n.language === lang.code ? 'bg-blue-600/10 text-blue-400' : ''}`}
+                  onClick={() => onChangeLanguage(lang.code)}
+                  className={`flex items-center gap-2 cursor-pointer focus:bg-slate-800 focus:text-white px-3 py-2 ${i18nLanguage === lang.code ? 'bg-blue-600/10 text-blue-400' : ''}`}
                 >
                   <span className="text-base">{lang.flag}</span>
                   <span className="text-xs font-bold">{lang.name}</span>
@@ -158,8 +142,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <UserIcon className="h-5 w-5 text-white" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-white truncate">{user?.name || 'Admin'}</span>
-              <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tight">{user?.role}</span>
+              <span className="text-sm font-bold text-white truncate">{userName || 'Admin'}</span>
+              <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tight">{userRole}</span>
             </div>
           </div>
         </div>
@@ -174,7 +158,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
           
           <button
-            onClick={handleLogout}
+            onClick={onLogout}
             className="flex items-center justify-center gap-2 p-3 text-slate-400 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all border border-slate-800/50"
             title={t('common.logout')}
           >
@@ -184,6 +168,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
     </div>
   );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated, logout } = useAuthStore();
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const navItems = [
+    { name: t('common.dashboard'), href: '/admin', icon: LayoutDashboard },
+    { name: t('common.posts'), href: '/admin/posts', icon: FileText },
+    { name: t('common.new_post'), href: '/admin/posts/new', icon: PlusSquare },
+    { name: t('common.categories'), href: '/admin/categories', icon: FolderOpen },
+    { name: t('common.tags'), href: '/admin/tags', icon: Tags },
+    { name: t('common.comments'), href: '/admin/comments', icon: MessageSquare },
+    { name: t('common.statistics'), href: '/admin/stats', icon: BarChart3 },
+    { name: t('common.settings'), href: '/admin/settings', icon: Settings },
+  ];
+
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  ];
+
+  const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0];
+
+  const changeLanguage = (code: string) => {
+    i18n.changeLanguage(code);
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -200,14 +232,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 bg-slate-950 border-r-slate-800 w-72">
-            <Sidebar />
+            <AdminSidebar
+              t={t}
+              i18nLanguage={i18n.language}
+              navItems={navItems}
+              pathname={pathname}
+              languages={languages}
+              currentLanguage={currentLanguage}
+              onChangeLanguage={changeLanguage}
+              onLogout={handleLogout}
+              userName={user?.name}
+              userRole={user?.role}
+            />
           </SheetContent>
         </Sheet>
       </header>
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <AdminSidebar
+          t={t}
+          i18nLanguage={i18n.language}
+          navItems={navItems}
+          pathname={pathname}
+          languages={languages}
+          currentLanguage={currentLanguage}
+          onChangeLanguage={changeLanguage}
+          onLogout={handleLogout}
+          userName={user?.name}
+          userRole={user?.role}
+        />
       </div>
 
       {/* Main Content */}

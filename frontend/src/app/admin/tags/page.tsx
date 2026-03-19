@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 import { 
   Plus, 
@@ -8,7 +9,6 @@ import {
   MoreVertical, 
   Edit2, 
   Trash2, 
-  Tags as TagsIcon,
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,7 +35,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import apiClient from '@/lib/api-client';
@@ -49,6 +48,10 @@ interface Tag {
   };
 }
 
+type ApiErrorData = {
+  message?: string;
+};
+
 export default function TagsPage() {
   const { t } = useTranslation();
   const [tags, setTags] = useState<Tag[]>([]);
@@ -59,11 +62,7 @@ export default function TagsPage() {
   const [currentTag, setCurrentTag] = useState<Partial<Tag>>({ name: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchTags();
-  }, []);
-
-  const fetchTags = async () => {
+  const fetchTags = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await apiClient.get('/blog/tags');
@@ -75,7 +74,11 @@ export default function TagsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    void fetchTags();
+  }, [fetchTags]);
 
   const filteredTags = Array.isArray(tags) ? tags.filter(tag => 
     tag.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -98,10 +101,11 @@ export default function TagsPage() {
         toast.success(t('tags.create_success'));
       }
       setIsDialogOpen(false);
-      fetchTags();
-    } catch (error: any) {
+      void fetchTags();
+    } catch (error: unknown) {
+      const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
       console.error('Error saving tag:', error);
-      toast.error(error.response?.data?.message || t('tags.save_failed'));
+      toast.error(errorMessage || t('tags.save_failed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -113,10 +117,11 @@ export default function TagsPage() {
     try {
       await apiClient.delete(`/blog/tags/${id}`);
       toast.success(t('tags.delete_success'));
-      fetchTags();
-    } catch (error: any) {
+      void fetchTags();
+    } catch (error: unknown) {
+      const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
       console.error('Error deleting tag:', error);
-      toast.error(error.response?.data?.message || t('tags.delete_failed'));
+      toast.error(errorMessage || t('tags.delete_failed'));
     }
   };
 

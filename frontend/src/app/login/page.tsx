@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +22,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/auth-store';
 import apiClient from '@/lib/api-client';
+
+type ApiErrorData = {
+  message?: string;
+};
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -51,9 +56,10 @@ export default function LoginPage() {
       setAuth(user, access_token);
       toast.success('Successfully logged in!');
       router.push('/admin');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
       console.error('Login error:', error);
-      toast.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      toast.error(errorMessage || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }

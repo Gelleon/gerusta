@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search, ArrowRight, Flame, TagIcon, Bot, Zap, Sparkles } from "lucide-react";
+import { Search, Flame, TagIcon, Bot, Sparkles } from "lucide-react";
 import { Wow3DCard } from "@/components/ui/3d/Wow3DCard";
 import { Floating3DBackground } from "@/components/ui/3d/Floating3DBackground";
 import { PerspectiveSection } from "@/components/ui/3d/PerspectiveSection";
 import { PostList } from "@/components/blog/PostList";
+import { seoBlogPosts } from "@/lib/seo-blog-posts";
+import { serviceLinks } from "@/lib/seo-pages";
 
 export const metadata: Metadata = {
   title: "Блог",
@@ -36,12 +38,10 @@ type UiPost = {
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const params = await searchParams;
   const q = (params?.q || "").trim().toLowerCase();
-  const page = Number(params?.page || 1);
-  const pageSize = 6;
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
   const { posts: apiPosts, total } = await fetch(`${API_URL}/blog/posts?take=100`, { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : { posts: [], total: 0 }))
@@ -57,17 +57,32 @@ export default async function BlogPage({
     date: p.createdAt,
     tags: (p.tags || []).map((t) => t.name),
   }));
-  const filtered = Array.isArray(posts) ? posts.filter(
+  const staticPosts: UiPost[] = seoBlogPosts.map((post) => ({
+    slug: post.slug,
+    title: post.title,
+    description: post.excerpt,
+    date: post.createdAt,
+    tags: post.tags,
+  }));
+  const postsBySlug = new Map<string, UiPost>();
+
+  [...staticPosts, ...posts].forEach((post) => {
+    if (!postsBySlug.has(post.slug)) {
+      postsBySlug.set(post.slug, post);
+    }
+  });
+
+  const mergedPosts = [...postsBySlug.values()].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+  const filtered = mergedPosts.filter(
     (p) =>
       !q ||
       p.title.toLowerCase().includes(q) ||
       p.description.toLowerCase().includes(q) ||
       p.tags.some((t) => t.toLowerCase().includes(q))
-  ) : [];
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const start = (page - 1) * pageSize;
-  const visible = filtered.slice(start, start + pageSize);
-  const popular = [...apiPostsArray]
+  );
+  const popular = [...apiPostsArray, ...seoBlogPosts]
     .sort((a, b) => (b.views || 0) - (a.views || 0))
     .slice(0, 5)
     .map((p) => ({
@@ -80,7 +95,7 @@ export default async function BlogPage({
     "@context": "https://schema.org",
     "@type": "Blog",
     name: "Gerusta Blog",
-    blogPost: posts.slice(0, 10).map((p: UiPost) => ({
+    blogPost: mergedPosts.slice(0, 10).map((p: UiPost) => ({
       "@type": "BlogPosting",
       headline: p.title,
       datePublished: p.date,
@@ -90,10 +105,6 @@ export default async function BlogPage({
 
   return (
     <Floating3DBackground intensity={0.5} density={12}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }}
-      />
       <main className="min-h-screen py-24">
         <div className="container mx-auto px-6">
           <PerspectiveSection rotationIntensity={10} scaleIntensity={0.98}>
@@ -129,7 +140,7 @@ export default async function BlogPage({
           </PerspectiveSection>
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
-            <PostList initialPosts={posts.slice(0, 6)} initialTotal={total} q={q} />
+            <PostList initialPosts={filtered.slice(0, 6)} initialTotal={Math.max(total || 0, filtered.length)} q={q} />
 
             <aside className="space-y-8">
               <Wow3DCard maxTilt={5} scale={1.02}>
@@ -160,11 +171,31 @@ export default async function BlogPage({
               <Wow3DCard maxTilt={5} scale={1.02}>
                 <div className="tg-card border border-slate-100 p-8">
                   <div className="flex items-center gap-2 mb-6 text-[#222222] font-black uppercase tracking-widest text-xs">
+                    <Bot className="w-4 h-4 text-tg-blue" />
+                    Услуги
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {serviceLinks.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="text-sm font-black text-[#222222] hover:text-tg-blue transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </Wow3DCard>
+
+              <Wow3DCard maxTilt={5} scale={1.02}>
+                <div className="tg-card border border-slate-100 p-8">
+                  <div className="flex items-center gap-2 mb-6 text-[#222222] font-black uppercase tracking-widest text-xs">
                     <TagIcon className="w-4 h-4 text-tg-blue" />
                     Темы блога
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {[...new Set(posts.flatMap((p) => p.tags))].map((tag) => (
+                    {[...new Set(mergedPosts.flatMap((p) => p.tags))].map((tag) => (
                       <Link
                         key={tag}
                         href={`/blog?q=${encodeURIComponent(tag)}`}

@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Search, 
   CheckCircle, 
-  XCircle, 
   Trash2, 
   MessageSquare,
   Loader2,
@@ -51,11 +50,7 @@ export default function CommentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchComments();
-  }, []);
-
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await apiClient.get('/blog/comments');
@@ -66,7 +61,11 @@ export default function CommentsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    void fetchComments();
+  }, [fetchComments]);
 
   const filteredComments = comments.filter(comment => 
     comment.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -80,7 +79,7 @@ export default function CommentsPage() {
     try {
       await apiClient.put(`/blog/comments/${id}/approve`);
       toast.success(t('comments.approve_success'));
-      fetchComments();
+      void fetchComments();
     } catch (error) {
       console.error('Error approving comment:', error);
       toast.error(t('comments.approve_failed'));
@@ -96,7 +95,7 @@ export default function CommentsPage() {
     try {
       await apiClient.delete(`/blog/comments/${id}`);
       toast.success(t('comments.delete_success'));
-      fetchComments();
+      void fetchComments();
     } catch (error) {
       console.error('Error deleting comment:', error);
       toast.error(t('comments.delete_failed'));

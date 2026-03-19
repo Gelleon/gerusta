@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { AxiosError } from 'axios';
 import { 
-  BarChart3, 
   TrendingUp, 
   Users, 
   MessageSquare, 
@@ -12,7 +12,6 @@ import {
   Tags as TagsIcon,
   Loader2,
   ArrowUpRight,
-  ArrowDownRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru, enUS } from 'date-fns/locale';
@@ -48,6 +47,10 @@ interface Stats {
   }[];
 }
 
+type ApiErrorData = {
+  message?: string;
+};
+
 export default function StatsPage() {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ru' ? ru : enUS;
@@ -65,16 +68,17 @@ export default function StatsPage() {
       const response = await apiClient.get('/blog/stats');
       console.log('Stats received:', response.data);
       setStats(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<ApiErrorData>;
       console.error('Error fetching stats:', error);
-      if (error.response) {
-        console.error('Data:', error.response.data);
-        console.error('Status:', error.response.status);
-        console.error('Headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('Request:', error.request);
+      if (axiosError.response) {
+        console.error('Data:', axiosError.response.data);
+        console.error('Status:', axiosError.response.status);
+        console.error('Headers:', axiosError.response.headers);
+      } else if (axiosError.request) {
+        console.error('Request:', axiosError.request);
       } else {
-        console.error('Message:', error.message);
+        console.error('Message:', axiosError.message);
       }
     } finally {
       setIsLoading(false);

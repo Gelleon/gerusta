@@ -6,7 +6,7 @@ import { Wow3DCard } from '@/components/ui/3d/Wow3DCard'
 import { ParallaxLayer } from '@/components/ui/3d/ParallaxLayer'
 import { PerspectiveSection } from '@/components/ui/3d/PerspectiveSection'
 import { Floating3DBackground } from '@/components/ui/3d/Floating3DBackground'
-import { Bot, Zap, Sparkles, Smartphone, MessageSquare, Shield, MousePointer2, Layers, Cpu, Globe, Rocket } from 'lucide-react'
+import { Bot, Zap, Sparkles, Shield, MousePointer2, Layers, Cpu, Globe, Rocket } from 'lucide-react'
 import Link from 'next/link'
 
 /**
@@ -139,7 +139,7 @@ export default function AnimationsPage() {
                   Perspective Scroll Transition
                 </h2>
                 <p className="text-[#707579] font-medium mt-2 ml-16 max-w-xl">
-                  Секции плавно наклоняются при скролле, создавая эффект "пролета" через контент.
+                  Секции плавно наклоняются при скролле, создавая эффект &quot;пролета&quot; через контент.
                 </p>
               </div>
 

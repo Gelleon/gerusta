@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Bot, Smartphone, Headset, Check, Zap, MessageSquare, Code } from 'lucide-react'
+import { Bot, Smartphone, Headset, Check, Zap } from 'lucide-react'
 import { TiltCard } from '@/components/ui/3d/TiltCard'
 
 const services = [
@@ -15,7 +16,8 @@ const services = [
       'Гибкая настройка под задачи',
       'от 10 000',
     ],
-    buttonText: 'Заказать',
+    href: '/razrabotka-telegram-botov',
+    buttonText: 'Подробнее',
     isPopular: false,
   },
   {
@@ -28,7 +30,8 @@ const services = [
       'Без ограничений по дизайну',
       'От 30 000 ₽ и 3 дней',
     ],
-    buttonText: 'Заказать',
+    href: '/telegram-web-app-razrabotka',
+    buttonText: 'Подробнее',
     isPopular: true,
   },
   {
@@ -41,7 +44,8 @@ const services = [
       'Регулярные обновления',
       'От 5 000 ₽ в месяц',
     ],
-    buttonText: 'Заказать',
+    href: '/podderzhka-telegram-botov',
+    buttonText: 'Подробнее',
     isPopular: false,
   },
 ]
@@ -130,19 +134,30 @@ export default function Services() {
                   ))}
                 </div>
 
-                <a 
-                  href="https://t.me/ar_semenov23"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`w-full py-4 rounded-2xl font-black transition-all shadow-sm active:scale-[0.98] flex items-center justify-center ${
+                <div className="mt-auto flex flex-col gap-3" style={{ transform: 'translateZ(40px)' }}>
+                  <Link
+                    href={service.href}
+                    className={`w-full py-4 rounded-2xl font-black transition-all shadow-sm active:scale-[0.98] flex items-center justify-center ${
+                      service.isPopular
+                        ? 'bg-tg-blue text-white hover:bg-tg-blue/90 hover:shadow-lg hover:shadow-tg-blue/20'
+                        : 'bg-slate-50 text-[#222222] hover:bg-slate-100'
+                    }`}
+                  >
+                    {service.buttonText}
+                  </Link>
+                  <a
+                    href="https://t.me/ar_semenov23"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full py-4 rounded-2xl font-black transition-all shadow-sm active:scale-[0.98] flex items-center justify-center ${
                     service.isPopular 
-                      ? 'bg-tg-blue text-white hover:bg-tg-blue/90 hover:shadow-lg hover:shadow-tg-blue/20' 
-                      : 'bg-slate-50 text-[#222222] hover:bg-slate-100'
+                        ? 'bg-white text-tg-blue hover:bg-slate-100'
+                        : 'bg-tg-blue text-white hover:bg-tg-blue/90'
                   }`}
-                  style={{ transform: 'translateZ(40px)' }}
                 >
-                  {service.buttonText}
-                </a>
+                    Заказать в Telegram
+                  </a>
+                </div>
               </motion.div>
             </TiltCard>
           ))}

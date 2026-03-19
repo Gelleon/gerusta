@@ -5,17 +5,12 @@ import {
   FileText, 
   Eye, 
   MessageSquare, 
-  Users, 
   TrendingUp, 
-  TrendingDown,
   Calendar,
-  Clock,
   ArrowRight,
   Plus,
-  Sparkles,
   Loader2,
   FolderOpen,
-  Tags
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +20,6 @@ import { ru, enUS } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import apiClient from '@/lib/api-client';
 
 interface DashboardStats {
@@ -34,8 +28,16 @@ interface DashboardStats {
   totalTags: number;
   totalComments: number;
   totalViews: number;
-  latestPosts: any[];
-  popularPosts: any[];
+  latestPosts: DashboardPost[];
+  popularPosts: DashboardPost[];
+}
+
+interface DashboardPost {
+  id: string;
+  title: string;
+  createdAt: string;
+  views: number;
+  published: boolean;
 }
 
 export default function AdminDashboard() {
@@ -236,7 +238,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="p-8 pt-4 space-y-6 flex-1">
             {stats?.popularPosts && stats.popularPosts.length > 0 ? (
-              stats.popularPosts.map((post, i) => (
+              stats.popularPosts.map((post) => (
                 <Link key={post.id} href={`/admin/posts/edit/${post.id}`}>
                   <div className="group cursor-pointer">
                     <div className="flex items-start justify-between gap-4 mb-2">

@@ -17,6 +17,11 @@ import { Bot, Zap, Sparkles, MessageSquare, Shield, Smartphone, LucideIcon } fro
 
 const iconList = [Bot, Zap, Sparkles, MessageSquare, Shield, Smartphone]
 
+const normalizedNoise = (value: number) => {
+  const sine = Math.sin(value) * 10000
+  return sine - Math.floor(sine)
+}
+
 interface FloatingElementData {
   id: number
   Icon: LucideIcon
@@ -88,13 +93,13 @@ export const Floating3DBackground: React.FC<Floating3DBackgroundProps> = ({
     offset: ['start end', 'end start'],
   })
 
-  const [isMobile, setIsMobile] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  })
 
   useEffect(() => {
-    setIsMounted(true)
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
@@ -103,13 +108,14 @@ export const Floating3DBackground: React.FC<Floating3DBackgroundProps> = ({
   const elements = useMemo(() => {
     return Array.from({ length: density }).map((_, i) => {
       const Icon = iconList[i % iconList.length]
-      const size = Math.floor(Math.random() * 20) + 20
-      const initialX = Math.floor(Math.random() * 100)
-      const initialY = Math.floor(Math.random() * 100)
-      const duration = Math.random() * 5 + 5
-      const delay = Math.random() * 5
-      const speed = (Math.random() - 0.5) * 2 * intensity
-      const rotateSpeed = (Math.random() - 0.5) * 360
+      const seed = i * 97.13 + density * 13.37 + intensity * 29.41
+      const size = Math.floor(normalizedNoise(seed + 1) * 20) + 20
+      const initialX = Math.floor(normalizedNoise(seed + 2) * 100)
+      const initialY = Math.floor(normalizedNoise(seed + 3) * 100)
+      const duration = normalizedNoise(seed + 4) * 5 + 5
+      const delay = normalizedNoise(seed + 5) * 5
+      const speed = (normalizedNoise(seed + 6) - 0.5) * 2 * intensity
+      const rotateSpeed = (normalizedNoise(seed + 7) - 0.5) * 360
 
       return {
         id: i,
@@ -128,7 +134,7 @@ export const Floating3DBackground: React.FC<Floating3DBackgroundProps> = ({
   return (
     <div ref={containerRef} className="relative w-full min-h-screen overflow-hidden bg-[#F4F4F5]">
       {/* Floating Elements Layer - Render only after mounting to avoid hydration/ref errors */}
-      {isMounted && !isMobile && (
+      {!isMobile && (
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           {elements.map((el) => (
             <FloatingElement key={el.id} el={el} scrollYProgress={scrollYProgress} />

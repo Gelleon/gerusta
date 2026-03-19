@@ -1,10 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Send, Check, Shield, Zap, Bot, MessageSquare, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { Send, Check, Shield, Zap, Bot, MessageSquare } from 'lucide-react'
 import { TiltCard } from '@/components/ui/3d/TiltCard'
 import { ParallaxLayer } from '@/components/ui/3d/ParallaxLayer'
-import HeroScene from '@/components/3d/HeroScene'
 
 const stats = [
   { value: '100+', label: 'Проектов', icon: Bot },
@@ -37,8 +37,9 @@ export default function Hero() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold leading-[1.1] mb-8 text-[#222222]">
-              Ваш бизнес в <br />
-              <span className="text-tg-blue">Telegram</span>
+              Разработка <span className="text-tg-blue">Telegram-ботов</span>
+              <br />
+              под ключ для бизнеса
             </h1>
             
             <p className="text-lg sm:text-xl text-[#707579] mb-10 max-w-lg leading-relaxed font-medium">
@@ -48,13 +49,13 @@ export default function Hero() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="btn-tg px-10 py-4 text-lg hover:shadow-lg hover:shadow-tg-blue/20 transition-all">
+              <Link href="/#contact" className="btn-tg px-10 py-4 text-lg hover:shadow-lg hover:shadow-tg-blue/20 transition-all">
                 <Send className="w-5 h-5 -rotate-12" />
                 Начать проект
-              </button>
-              <button className="btn-tg-outline px-10 py-4 text-lg hover:bg-white transition-all">
+              </Link>
+              <Link href="/#cases" className="btn-tg-outline px-10 py-4 text-lg hover:bg-white transition-all">
                 Наши кейсы
-              </button>
+              </Link>
             </div>
           </motion.div>
 

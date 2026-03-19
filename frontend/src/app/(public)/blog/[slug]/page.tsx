@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Tag, Clock, Share2, Bot, Send, ImageIcon } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, Clock, Share2, Bot, Send } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getImageUrl } from "@/lib/utils";
+import { seoBlogPostsBySlug } from "@/lib/seo-blog-posts";
 
 type ApiPost = {
-  id: string;
+  id?: string;
   slug: string;
   title: string;
   excerpt?: string;
@@ -22,12 +24,29 @@ async function getPost(slug: string): Promise<ApiPost | null> {
     const res = await fetch(`${API_URL}/blog/posts/${slug}`, {
       next: { revalidate: 60 }, // Revalidate every minute
     });
-    if (!res.ok) return null;
-    return res.json();
-  } catch (error) {
-    console.error("Error fetching post:", error);
+    if (res.ok) {
+      return res.json();
+    }
+  } catch {
     return null;
   }
+
+  const fallbackPost = seoBlogPostsBySlug[slug];
+
+  if (!fallbackPost) {
+    return null;
+  }
+
+  return {
+    slug: fallbackPost.slug,
+    title: fallbackPost.title,
+    excerpt: fallbackPost.excerpt,
+    content: fallbackPost.content,
+    createdAt: fallbackPost.createdAt,
+    featuredImage: undefined,
+    tags: fallbackPost.tags.map((tag) => ({ name: tag })),
+    category: { name: fallbackPost.category },
+  };
 }
 
 export async function generateMetadata({
@@ -104,8 +123,12 @@ export default async function BlogPostPage({
 
             {post.featuredImage && (
               <div className="mb-12 rounded-[2rem] overflow-hidden border border-slate-100 shadow-2xl">
-                <img 
+                <Image
                   src={getImageUrl(post.featuredImage)} 
+                  width={1600}
+                  height={686}
+                  sizes="(max-width: 1024px) 100vw, 1600px"
+                  unoptimized
                   alt={post.title}
                   className="w-full aspect-[21/9] object-cover"
                 />
