@@ -50,6 +50,11 @@ export const metadata: Metadata = {
     description:
       "Премиальная разработка Telegram-ботов и Mini Apps для бизнеса. Интеграции, оплаты, CRM и поддержка.",
   },
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/icon.svg"],
+    apple: [{ url: "/apple-touch-icon.svg", type: "image/svg+xml" }],
+  },
   robots: {
     index: true,
     follow: true,
@@ -63,6 +68,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
+      <head>
+        <link rel="mask-icon" href="/mask-icon.svg" color="#0088CC" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
