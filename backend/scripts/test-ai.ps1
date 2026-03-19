@@ -1,13 +1,24 @@
 Param()
 
 $ErrorActionPreference = 'Stop'
+$AdminLogin = $env:ADMIN_LOGIN
+$AdminPassword = $env:ADMIN_PASSWORD
+
+if ([string]::IsNullOrWhiteSpace($AdminLogin) -or [string]::IsNullOrWhiteSpace($AdminPassword)) {
+  throw 'Set ADMIN_LOGIN and ADMIN_PASSWORD before running this script.'
+}
 
 Write-Host "Logging in..."
+$LoginBody = @{
+  email = $AdminLogin
+  password = $AdminPassword
+} | ConvertTo-Json
+
 $login = Invoke-RestMethod `
   -Method Post `
   -Uri 'http://localhost:3001/auth/login' `
   -ContentType 'application/json' `
-  -Body '{"email":"admin@example.com","password":"admin123"}'
+  -Body $LoginBody
 
 $token = $login.access_token
 Write-Host "Token acquired."

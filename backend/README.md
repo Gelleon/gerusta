@@ -31,6 +31,21 @@
 $ npm install
 ```
 
+## Environment variables
+
+Create `.env` from `.env.example` and set values for admin authentication:
+
+```bash
+$ cp .env.example .env
+```
+
+Required variables:
+
+- `ADMIN_LOGIN`
+- `ADMIN_PASSWORD`
+
+Seed uses these variables to create or update the admin user.
+
 ## Compile and run the project
 
 ```bash
@@ -55,6 +70,21 @@ $ npm run test:e2e
 
 # test coverage
 $ npm run test:cov
+```
+
+## Admin auth check
+
+After seed and app start, verify admin login:
+
+```bash
+$ npx prisma db seed
+$ npm run start:dev
+```
+
+Then run:
+
+```powershell
+.\scripts\test-ai.ps1
 ```
 
 ## Deployment

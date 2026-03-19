@@ -117,7 +117,9 @@ export class BlogService {
     } catch (err: any) {
       this.logger.error(`Error creating post: ${err.message}`, err.stack);
       if (err.code === 'P2003') {
-        throw new BadRequestException(`Foreign key constraint failed: ${err.meta?.field_name}. Make sure category exists.`);
+        throw new BadRequestException(
+          `Foreign key constraint failed: ${err.meta?.field_name}. Make sure category exists.`,
+        );
       }
       throw err;
     }
@@ -141,7 +143,10 @@ export class BlogService {
           categoryId: category,
           tags: tag ? { some: { id: tag } } : undefined,
           OR: search
-            ? [{ title: { contains: search } }, { content: { contains: search } }]
+            ? [
+                { title: { contains: search } },
+                { content: { contains: search } },
+              ]
             : undefined,
         },
         include: {
@@ -165,7 +170,10 @@ export class BlogService {
           categoryId: category,
           tags: tag ? { some: { id: tag } } : undefined,
           OR: search
-            ? [{ title: { contains: search } }, { content: { contains: search } }]
+            ? [
+                { title: { contains: search } },
+                { content: { contains: search } },
+              ]
             : undefined,
         },
       }),
@@ -195,7 +203,8 @@ export class BlogService {
     const { tags, ...postData } = updatePostDto;
 
     const currentPost = await this.findOnePost(id);
-    if (currentPost.deleted) throw new BadRequestException('Cannot update deleted post');
+    if (currentPost.deleted)
+      throw new BadRequestException('Cannot update deleted post');
 
     if (postData.scheduledAt && new Date(postData.scheduledAt) < new Date()) {
       throw new BadRequestException('Scheduled date must be in the future');
@@ -235,9 +244,9 @@ export class BlogService {
   async deletePost(id: string) {
     const post = await this.prisma.post.findUnique({ where: { id } });
     if (!post) throw new NotFoundException('Post not found');
-    
+
     this.logger.warn(`Soft deleting post ${id}: ${post.title}`);
-    
+
     return this.prisma.post.update({
       where: { id },
       data: {
@@ -400,19 +409,24 @@ export class BlogService {
   async getStats() {
     this.logger.log('Starting dashboard data synchronization...');
     try {
-      const [postsCount, categoriesCount, tagsCount, commentsCount, totalViews] =
-        await Promise.all([
-          this.prisma.post.count({ where: { deleted: false } }),
-          this.prisma.category.count(),
-          this.prisma.tag.count(),
-          this.prisma.comment.count(),
-          this.prisma.post.aggregate({
-            where: { deleted: false },
-            _sum: {
-              views: true,
-            },
-          }),
-        ]);
+      const [
+        postsCount,
+        categoriesCount,
+        tagsCount,
+        commentsCount,
+        totalViews,
+      ] = await Promise.all([
+        this.prisma.post.count({ where: { deleted: false } }),
+        this.prisma.category.count(),
+        this.prisma.tag.count(),
+        this.prisma.comment.count(),
+        this.prisma.post.aggregate({
+          where: { deleted: false },
+          _sum: {
+            views: true,
+          },
+        }),
+      ]);
 
       const latestPosts = await this.prisma.post.findMany({
         where: { deleted: false },

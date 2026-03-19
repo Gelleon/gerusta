@@ -151,16 +151,28 @@ describe('BlogService', () => {
     it('should filter out deleted posts from all stats', async () => {
       const mockAggregate = { _sum: { views: 100 } };
       const mockPosts = [
-        { id: '1', title: 'Post 1', views: 50, createdAt: new Date(), published: true },
-        { id: '2', title: 'Post 2', views: 50, createdAt: new Date(), published: true },
+        {
+          id: '1',
+          title: 'Post 1',
+          views: 50,
+          createdAt: new Date(),
+          published: true,
+        },
+        {
+          id: '2',
+          title: 'Post 2',
+          views: 50,
+          createdAt: new Date(),
+          published: true,
+        },
       ];
 
-      (mockPrismaService.post.count as jest.Mock).mockResolvedValue(2);
-      (mockPrismaService.post.aggregate as jest.Mock).mockResolvedValue(mockAggregate);
-      (mockPrismaService.post.findMany as jest.Mock).mockResolvedValue(mockPosts);
-      (mockPrismaService.category.count as jest.Mock).mockResolvedValue(1);
-      (mockPrismaService.tag.count as jest.Mock).mockResolvedValue(1);
-      (mockPrismaService.comment.count as jest.Mock).mockResolvedValue(1);
+      mockPrismaService.post.count.mockResolvedValue(2);
+      mockPrismaService.post.aggregate.mockResolvedValue(mockAggregate);
+      mockPrismaService.post.findMany.mockResolvedValue(mockPosts);
+      mockPrismaService.category.count.mockResolvedValue(1);
+      mockPrismaService.tag.count.mockResolvedValue(1);
+      mockPrismaService.comment.count.mockResolvedValue(1);
 
       const result = await service.getStats();
 

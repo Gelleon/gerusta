@@ -16,6 +16,16 @@ import { BackupService } from './backup/backup.service';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: (env) => {
+        const requiredVars = ['ADMIN_LOGIN', 'ADMIN_PASSWORD'];
+        const missingVars = requiredVars.filter((key) => !env[key]);
+        if (missingVars.length > 0) {
+          throw new Error(
+            `Missing required environment variables: ${missingVars.join(', ')}`,
+          );
+        }
+        return env;
+      },
     }),
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),

@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { GenerateContentDto, GenerateImageDto } from './dto/ai.dto';
@@ -16,9 +20,9 @@ export class AiService {
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY')?.trim();
     const proxyUrl = this.configService.get<string>('HTTPS_PROXY')?.trim();
-    
+
     const options: any = { apiKey };
-    
+
     if (proxyUrl) {
       console.log('Using proxy for OpenAI:', proxyUrl);
       options.httpAgent = new HttpsProxyAgent(proxyUrl);
@@ -55,10 +59,16 @@ export class AiService {
     } catch (err: any) {
       console.error('Error generating article:', err);
       if (err.error) {
-        console.error('OpenAI Error Details:', JSON.stringify(err.error, null, 2));
+        console.error(
+          'OpenAI Error Details:',
+          JSON.stringify(err.error, null, 2),
+        );
       }
-      const errorMessage = err.error?.message || err.message || 'Failed to generate article';
-      throw new InternalServerErrorException(`AI Article Generation Error: ${errorMessage}`);
+      const errorMessage =
+        err.error?.message || err.message || 'Failed to generate article';
+      throw new InternalServerErrorException(
+        `AI Article Generation Error: ${errorMessage}`,
+      );
     }
   }
 
@@ -86,14 +96,20 @@ export class AiService {
       return { url: await this.optimizeAndSaveImage(imageUrl) };
     } catch (err: any) {
       console.error('Error generating image:', err);
-      
+
       // Detailed error logging to help identify region/proxy issues
       if (err.error) {
-        console.error('OpenAI Error Details:', JSON.stringify(err.error, null, 2));
+        console.error(
+          'OpenAI Error Details:',
+          JSON.stringify(err.error, null, 2),
+        );
       }
 
-      const errorMessage = err.error?.message || err.message || 'Failed to generate image';
-      throw new InternalServerErrorException(`AI Image Generation Error: ${errorMessage}`);
+      const errorMessage =
+        err.error?.message || err.message || 'Failed to generate image';
+      throw new InternalServerErrorException(
+        `AI Image Generation Error: ${errorMessage}`,
+      );
     }
   }
 
@@ -108,14 +124,14 @@ export class AiService {
     try {
       const proxyUrl = this.configService.get<string>('HTTPS_PROXY')?.trim();
       const axiosOptions: any = { responseType: 'arraybuffer' };
-      
+
       if (proxyUrl) {
         axiosOptions.httpsAgent = new HttpsProxyAgent(proxyUrl);
       }
 
       const response = await axios.get(url, axiosOptions);
       const buffer = Buffer.from(response.data);
-      
+
       await sharp(buffer)
         .webp({ quality: 80 })
         .toFile(path.join(uploadDir, filename));
