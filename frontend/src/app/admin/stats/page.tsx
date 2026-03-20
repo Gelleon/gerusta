@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import apiClient from '@/lib/api-client';
+import { seoBlogPosts } from '@/lib/seo-blog-posts';
 
 interface Stats {
   totalPosts: number;
@@ -38,7 +39,8 @@ interface Stats {
     title: string;
     views: number;
     createdAt: string;
-    status: string;
+    status?: string;
+    published?: boolean;
   }[];
   popularPosts: {
     id: string;
@@ -64,10 +66,46 @@ export default function StatsPage() {
   const fetchStats = async () => {
     setIsLoading(true);
     try {
-      console.log('Fetching stats from /blog/stats...');
       const response = await apiClient.get('/blog/stats');
-      console.log('Stats received:', response.data);
-      setStats(response.data);
+      const apiStats = response.data as Stats;
+      const seoPosts = seoBlogPosts.map((post) => ({
+        id: `seo:${post.slug}`,
+        title: post.title,
+        views: post.views ?? 0,
+        createdAt: post.createdAt,
+        status: 'published',
+      }));
+      const mergedByTitle = new Map<string, Stats['latestPosts'][number]>();
+
+      [...(apiStats.latestPosts ?? []), ...seoPosts].forEach((post) => {
+        const key = post.title.trim().toLowerCase();
+        if (!mergedByTitle.has(key)) {
+          mergedByTitle.set(key, post);
+        }
+      });
+
+      const mergedLatest = [...mergedByTitle.values()].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+      const mergedPopular = [...mergedLatest]
+        .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+        .slice(0, 5)
+        .map((post) => ({
+          id: post.id,
+          title: post.title,
+          views: post.views,
+        }));
+
+      setStats({
+        ...apiStats,
+        totalPosts: Math.max(apiStats.totalPosts ?? 0, mergedLatest.length),
+        totalViews: Math.max(
+          apiStats.totalViews ?? 0,
+          mergedLatest.reduce((sum, post) => sum + (post.views ?? 0), 0),
+        ),
+        latestPosts: mergedLatest.slice(0, 5),
+        popularPosts: mergedPopular,
+      });
     } catch (error: unknown) {
       const axiosError = error as AxiosError<ApiErrorData>;
       console.error('Error fetching stats:', error);
@@ -208,8 +246,8 @@ export default function StatsPage() {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                       <span>{format(new Date(post.createdAt), 'MMM d, yyyy', { locale: dateLocale })}</span>
                       <span>•</span>
-                      <Badge variant={post.status === 'published' ? 'default' : 'secondary'} className="text-[10px] h-4 px-1 leading-none">
-                        {post.status === 'published' ? t('common.published') : t('common.draft')}
+                      <Badge variant={post.status === 'published' || post.published ? 'default' : 'secondary'} className="text-[10px] h-4 px-1 leading-none">
+                        {post.status === 'published' || post.published ? t('common.published') : t('common.draft')}
                       </Badge>
                     </div>
                   </div>

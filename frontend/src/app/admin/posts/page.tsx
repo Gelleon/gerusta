@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import apiClient from '@/lib/api-client';
+import { seoBlogPosts } from '@/lib/seo-blog-posts';
 
 interface Post {
   id: string;
@@ -39,6 +40,7 @@ interface Post {
   views: number;
   category?: { name: string };
   author: { name?: string; email: string };
+  isSeo?: boolean;
 }
 
 export default function PostsPage() {
@@ -56,13 +58,32 @@ export default function PostsPage() {
       const response = await apiClient.get('/blog/admin/posts');
       // The backend returns { posts: Post[], total: number }
       const data = response.data;
-      if (data && typeof data === 'object' && Array.isArray(data.posts)) {
-        setPosts(data.posts);
-      } else if (Array.isArray(data)) {
-        setPosts(data);
-      } else {
-        setPosts([]);
-      }
+      const apiPosts: Post[] =
+        data && typeof data === 'object' && Array.isArray(data.posts)
+          ? data.posts
+          : Array.isArray(data)
+            ? data
+            : [];
+
+      const existingSlugs = new Set(apiPosts.map((post) => post.slug));
+      const seoPosts: Post[] = seoBlogPosts
+        .filter((post) => !existingSlugs.has(post.slug))
+        .map((post) => ({
+          id: `seo:${post.slug}`,
+          title: post.title,
+          slug: post.slug,
+          published: true,
+          createdAt: post.createdAt,
+          views: post.views ?? 0,
+          category: { name: post.category },
+          author: { name: 'SEO', email: 'seo@local' },
+          isSeo: true,
+        }));
+
+      const mergedPosts = [...apiPosts, ...seoPosts].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+      setPosts(mergedPosts);
     } catch (error) {
       console.error('Error fetching posts:', error);
       toast.error(t('posts.load_failed'));
@@ -117,6 +138,11 @@ export default function PostsPage() {
   };
 
   const deletePost = async (id: string) => {
+    if (id.startsWith('seo:')) {
+      toast.info(t('posts.delete_not_available', 'SEO-статью нельзя удалить из админки блога'));
+      return;
+    }
+
     if (!confirm(t('posts.delete_confirm'))) return;
     
     try {
@@ -296,7 +322,7 @@ export default function PostsPage() {
                             </Link>
                           </Button>
                           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" asChild title={t('posts.edit_post')}>
-                            <Link href={`/admin/posts/${post.id}`}>
+                            <Link href={post.isSeo ? `/blog/${post.slug}` : `/admin/posts/${post.id}`}>
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>

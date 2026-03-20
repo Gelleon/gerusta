@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import apiClient from '@/lib/api-client';
+import { seoBlogPosts } from '@/lib/seo-blog-posts';
 
 interface DashboardStats {
   totalPosts: number;
@@ -51,7 +52,41 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         const response = await apiClient.get('/blog/stats');
-        setStats(response.data);
+        const apiStats = response.data as DashboardStats;
+        const seoPosts: DashboardPost[] = seoBlogPosts.map((post) => ({
+          id: `seo:${post.slug}`,
+          title: post.title,
+          createdAt: post.createdAt,
+          views: post.views ?? 0,
+          published: true,
+        }));
+        const mergedPostsByTitle = new Map<string, DashboardPost>();
+
+        [...(apiStats.latestPosts ?? []), ...seoPosts].forEach((post) => {
+          const key = post.title.trim().toLowerCase();
+          if (!mergedPostsByTitle.has(key)) {
+            mergedPostsByTitle.set(key, post);
+          }
+        });
+
+        const mergedPosts = [...mergedPostsByTitle.values()].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+
+        const mergedPopular = [...mergedPosts]
+          .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+          .slice(0, 5);
+
+        setStats({
+          ...apiStats,
+          totalPosts: Math.max(apiStats.totalPosts ?? 0, mergedPosts.length),
+          totalViews: Math.max(
+            apiStats.totalViews ?? 0,
+            mergedPosts.reduce((sum, post) => sum + (post.views ?? 0), 0),
+          ),
+          latestPosts: mergedPosts.slice(0, 5),
+          popularPosts: mergedPopular,
+        });
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
       } finally {
