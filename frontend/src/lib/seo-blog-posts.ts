@@ -82,7 +82,7 @@ export const seoBlogPosts: SeoBlogPost[] = [
     ),
     createdAt: "2026-02-20T10:00:00.000Z",
     tags: ["telegram", "бот", "разработка", "автоматизация"],
-    views: 1240,
+    views: 0,
     category: "Гайды",
   },
   {
@@ -98,7 +98,7 @@ export const seoBlogPosts: SeoBlogPost[] = [
     ),
     createdAt: "2026-02-24T10:00:00.000Z",
     tags: ["стоимость", "telegram-бот", "бюджет", "ROI"],
-    views: 980,
+    views: 0,
     category: "Экономика",
   },
   {
@@ -114,7 +114,7 @@ export const seoBlogPosts: SeoBlogPost[] = [
     ),
     createdAt: "2026-02-28T10:00:00.000Z",
     tags: ["примеры", "telegram", "бизнес", "кейсы"],
-    views: 1120,
+    views: 0,
     category: "Практика",
   },
   {
@@ -130,7 +130,7 @@ export const seoBlogPosts: SeoBlogPost[] = [
     ),
     createdAt: "2026-03-04T10:00:00.000Z",
     tags: ["web app", "telegram", "интерфейс", "продукт"],
-    views: 870,
+    views: 0,
     category: "Технологии",
   },
   {
@@ -146,7 +146,7 @@ export const seoBlogPosts: SeoBlogPost[] = [
     ),
     createdAt: "2026-03-10T10:00:00.000Z",
     tags: ["бизнес", "telegram-бот", "конверсия", "аналитика"],
-    views: 760,
+    views: 0,
     category: "Стратегия",
   },
 ];
