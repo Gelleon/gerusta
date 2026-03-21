@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Tag, Clock, Share2, Bot, Send } from "lucide-react";
 import { notFound } from "next/navigation";
-import { getImageUrl } from "@/lib/utils";
+import { formatPostContentToHtml, getImageUrl } from "@/lib/utils";
 import { seoBlogPostsBySlug } from "@/lib/seo-blog-posts";
 
 type ApiPost = {
@@ -117,7 +117,7 @@ export default async function BlogPostPage({
               </div>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-8 leading-tight text-[#222222]">
+            <h1 className="text-3xl md:text-5xl lg:text-[3.5rem] font-black mb-8 leading-tight text-[#222222]">
               {post.title}
             </h1>
 
@@ -145,8 +145,11 @@ export default async function BlogPostPage({
           </header>
 
           {/* Content */}
-          <article className="prose prose-lg prose-tg max-w-none mb-16 text-[#222222]">
-            <div dangerouslySetInnerHTML={{ __html: post.content }} />
+          <article className="mb-16">
+            <div
+              className="post-rich-text mx-auto max-w-3xl text-[#222222]"
+              dangerouslySetInnerHTML={{ __html: formatPostContentToHtml(post.content) }}
+            />
           </article>
 
           {/* Tags */}

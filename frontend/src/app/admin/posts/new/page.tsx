@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { getImageUrl } from '@/lib/utils';
+import { formatPostContentToHtml, getImageUrl } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -417,14 +417,17 @@ export default function NewPostPage() {
                             </div>
                           )}
 
-                          <div className="prose prose-indigo prose-lg dark:prose-invert max-w-none whitespace-pre-wrap font-serif text-slate-800 leading-relaxed">
-                            {form.watch('content') || (
-                              <div className="flex flex-col items-center justify-center py-20 text-slate-300 gap-4">
-                                <Sparkles className="h-12 w-12" />
-                                <p className="text-lg font-medium">{t('posts.preview_content_placeholder')}</p>
-                              </div>
-                            )}
-                          </div>
+                          {form.watch('content') ? (
+                            <div
+                              className="post-rich-text text-slate-800"
+                              dangerouslySetInnerHTML={{ __html: formatPostContentToHtml(form.watch('content')) }}
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-300 gap-4">
+                              <Sparkles className="h-12 w-12" />
+                              <p className="text-lg font-medium">{t('posts.preview_content_placeholder')}</p>
+                            </div>
+                          )}
 
                           {form.watch('tags') && form.watch('tags').length > 0 && (
                             <div className="mt-16 pt-8 border-t border-slate-100 flex flex-wrap gap-2">
