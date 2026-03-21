@@ -84,22 +84,6 @@ const longSeoParagraphs = (keyword: string, businessContext: string) => [
 
 export const seoPages: SeoPage[] = [
   {
-    slug: "razrabotka-telegram-botov",
-    title: "Разработка Telegram-ботов под ключ для бизнеса",
-    description:
-      "Разработка Telegram-ботов под ключ: аналитика, интеграции, CRM, оплаты, запуск за 3–7 дней и сопровождение.",
-    h1: "Разработка Telegram-ботов под ключ для бизнеса",
-    lead:
-      "Создаем ботов, которые принимают заявки, ускоряют продажи и автоматизируют поддержку с прозрачной аналитикой.",
-    paragraphs: longSeoParagraphs("разработка telegram ботов", "компаний, которые хотят быстрее обрабатывать входящие обращения"),
-    includeItems: serviceIncludeItems,
-    faq: baseFaq,
-    cases: serviceCases,
-    ctaTitle: "Нужна разработка Telegram-бота под ключ?",
-    ctaText:
-      "Получите бесплатную консультацию и план запуска проекта за 3–7 дней с понятной сметой.",
-  },
-  {
     slug: "telegram-bot-dlya-biznesa",
     title: "Telegram-бот для бизнеса: разработка и внедрение",
     description:
@@ -130,38 +114,6 @@ export const seoPages: SeoPage[] = [
     ctaTitle: "Автоматизировать бизнес-процессы в Telegram",
     ctaText:
       "Соберем карту автоматизации, настроим процессы и запустим MVP за 3–7 дней.",
-  },
-  {
-    slug: "telegram-web-app-razrabotka",
-    title: "Разработка Telegram Web App",
-    description:
-      "Разработка Telegram Web App под ключ: UX, каталог, корзина, оплата, CRM, аналитика и поддержка.",
-    h1: "Разработка Telegram Web App под ключ",
-    lead:
-      "Делаем Web App внутри Telegram для продаж, сервисов и клиентского кабинета с высокой конверсией.",
-    paragraphs: longSeoParagraphs("telegram web app разработка", "проектов с расширенным интерфейсом и сложной логикой"),
-    includeItems: serviceIncludeItems,
-    faq: baseFaq,
-    cases: serviceCases,
-    ctaTitle: "Нужен Telegram Web App для вашего бизнеса?",
-    ctaText:
-      "Запустим удобный Web App под ключ и интегрируем с вашими бизнес-системами без лишних рисков.",
-  },
-  {
-    slug: "podderzhka-telegram-botov",
-    title: "Поддержка Telegram-ботов и развитие продукта",
-    description:
-      "Поддержка Telegram-ботов: мониторинг 24/7, доработки, контроль стабильности, релизы и масштабирование.",
-    h1: "Поддержка Telegram-ботов и развитие продукта",
-    lead:
-      "Обеспечиваем стабильную работу Telegram-ботов, быстрые доработки и планомерное развитие по KPI.",
-    paragraphs: longSeoParagraphs("поддержка telegram ботов", "компаний с постоянной нагрузкой и высокими SLA"),
-    includeItems: serviceIncludeItems,
-    faq: baseFaq,
-    cases: serviceCases,
-    ctaTitle: "Передать поддержку Telegram-бота команде Gerusta",
-    ctaText:
-      "Берем сопровождение под ключ: мониторинг, релизы, оптимизация сценариев и рост конверсии.",
   },
   {
     slug: "telegram-bot-dlya-internet-magazina",
@@ -439,11 +391,8 @@ export const seoPagesBySlug = Object.fromEntries(
 ) as Record<string, SeoPage>;
 
 export const serviceLinks = [
-  { href: "/razrabotka-telegram-botov", label: "Разработка ботов" },
   { href: "/telegram-bot-dlya-biznesa", label: "Бот для бизнеса" },
   { href: "/avtomatizaciya-biznesa-telegram", label: "Автоматизация" },
-  { href: "/telegram-web-app-razrabotka", label: "Telegram Web App" },
-  { href: "/podderzhka-telegram-botov", label: "Поддержка" },
 ];
 
 export const commercialLinks = [
