@@ -142,7 +142,7 @@ export default function AdminDashboard() {
   const getPostHref = (post: DashboardPost) => {
     if (post.id.startsWith('seo:')) {
       const slug = post.slug ?? post.id.replace('seo:', '');
-      return `/blog/${slug}`;
+      return `/admin/posts/new?fromSeo=${slug}`;
     }
 
     return `/admin/posts/${post.id}`;

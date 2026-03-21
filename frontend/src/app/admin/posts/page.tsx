@@ -322,7 +322,7 @@ export default function PostsPage() {
                             </Link>
                           </Button>
                           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" asChild title={t('posts.edit_post')}>
-                            <Link href={post.isSeo ? `/blog/${post.slug}` : `/admin/posts/${post.id}`}>
+                            <Link href={post.isSeo ? `/admin/posts/new?fromSeo=${post.slug}` : `/admin/posts/${post.id}`}>
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>

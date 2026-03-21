@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -39,6 +39,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import apiClient from '@/lib/api-client';
+import { seoBlogPostsBySlug } from '@/lib/seo-blog-posts';
 
 const postSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -58,6 +59,7 @@ type PostFormValues = z.infer<typeof postSchema>;
 export default function NewPostPage() {
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -92,6 +94,31 @@ export default function NewPostPage() {
     };
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    const fromSeo = searchParams.get('fromSeo');
+    if (!fromSeo) return;
+
+    const seoPost = seoBlogPostsBySlug[fromSeo];
+    if (!seoPost) return;
+
+    form.setValue('title', seoPost.title);
+    form.setValue('excerpt', seoPost.excerpt);
+    form.setValue('content', seoPost.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+    form.setValue('tags', seoPost.tags);
+    form.setValue('metaTitle', seoPost.title);
+    form.setValue('metaDescription', seoPost.excerpt);
+    form.setValue('published', true);
+
+    if (!form.getValues('categoryId') && categories.length > 0) {
+      const matchedCategory = categories.find(
+        (category) => category.name.toLowerCase() === seoPost.category.toLowerCase(),
+      );
+      form.setValue('categoryId', matchedCategory?.id ?? categories[0].id);
+    }
+
+    toast.success('SEO-статья загружена в редактор. Сохранение создаст новую запись в БД.');
+  }, [categories, form, searchParams]);
 
   const generateAIContent = async () => {
     const title = form.getValues('title');
