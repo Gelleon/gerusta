@@ -35,6 +35,7 @@ interface DashboardStats {
 
 interface DashboardPost {
   id: string;
+  slug?: string;
   title: string;
   createdAt: string;
   views: number;
@@ -55,6 +56,7 @@ export default function AdminDashboard() {
         const apiStats = response.data as DashboardStats;
         const seoPosts: DashboardPost[] = seoBlogPosts.map((post) => ({
           id: `seo:${post.slug}`,
+          slug: post.slug,
           title: post.title,
           createdAt: post.createdAt,
           views: post.views ?? 0,
@@ -137,6 +139,15 @@ export default function AdminDashboard() {
     },
   ];
 
+  const getPostHref = (post: DashboardPost) => {
+    if (post.id.startsWith('seo:')) {
+      const slug = post.slug ?? post.id.replace('seo:', '');
+      return `/blog/${slug}`;
+    }
+
+    return `/admin/posts/${post.id}`;
+  };
+
   return (
     <div className="space-y-10">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -207,7 +218,7 @@ export default function AdminDashboard() {
             <div className="px-4 pb-4">
               {stats?.latestPosts && stats.latestPosts.length > 0 ? (
                 stats.latestPosts.map((post) => (
-                  <Link key={post.id} href={`/admin/posts/edit/${post.id}`}>
+                  <Link key={post.id} href={getPostHref(post)}>
                     <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-slate-100">
                       <div className="space-y-1.5 min-w-0 flex-1 mr-4">
                         <p className="text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
@@ -274,7 +285,7 @@ export default function AdminDashboard() {
           <CardContent className="p-8 pt-4 space-y-6 flex-1">
             {stats?.popularPosts && stats.popularPosts.length > 0 ? (
               stats.popularPosts.map((post) => (
-                <Link key={post.id} href={`/admin/posts/edit/${post.id}`}>
+                <Link key={post.id} href={getPostHref(post)}>
                   <div className="group cursor-pointer">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate">
