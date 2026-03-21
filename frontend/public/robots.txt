@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /login
+Crawl-delay: 5
+
+Host: https://gerusta.ru
+Sitemap: https://gerusta.ru/sitemap.xml

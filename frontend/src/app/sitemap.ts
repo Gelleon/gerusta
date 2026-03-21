@@ -4,15 +4,56 @@ import { seoBlogPosts } from "@/lib/seo-blog-posts";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const staticPages = ["/", "/animations", "/blog"];
-  const seoPages = seoPageSlugs.map((slug) => `/${slug}`);
-  const blogPages = seoBlogPosts.map((post) => `/blog/${post.slug}`);
-  const pages = [...new Set([...staticPages, ...seoPages, ...blogPages])];
+  const fallbackLastModified = new Date();
 
-  return pages.map((path) => ({
-    url: `${base}${path}`,
-    lastModified: new Date(),
-    changeFrequency: path.startsWith("/blog/") ? "monthly" : "weekly",
-    priority: path === "/" ? 1.0 : path.startsWith("/blog/") ? 0.6 : 0.8,
+  const staticPages = [
+    {
+      path: "/",
+      changeFrequency: "weekly" as const,
+      priority: 1,
+      lastModified: fallbackLastModified,
+    },
+    {
+      path: "/animations",
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+      lastModified: fallbackLastModified,
+    },
+    {
+      path: "/blog",
+      changeFrequency: "daily" as const,
+      priority: 0.9,
+      lastModified: fallbackLastModified,
+    },
+  ];
+
+  const seoPages = seoPageSlugs.map((slug) => ({
+    path: `/${slug}`,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+    lastModified: fallbackLastModified,
+  }));
+
+  const blogPages = seoBlogPosts.map((post) => ({
+    path: `/blog/${post.slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+    lastModified: new Date(post.createdAt),
+  }));
+
+  const allPages = [...staticPages, ...seoPages, ...blogPages];
+  const pagesByPath = new Map<string, (typeof allPages)[number]>();
+
+  allPages.forEach((page) => {
+    if (!pagesByPath.has(page.path)) {
+      pagesByPath.set(page.path, page);
+    }
+  });
+
+  return [...pagesByPath.values()].map((page) => ({
+    url: `${base}${page.path}`,
+    lastModified: page.lastModified,
+    changeFrequency: page.changeFrequency,
+    priority: page.priority,
   }));
 }
