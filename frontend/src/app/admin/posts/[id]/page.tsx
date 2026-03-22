@@ -68,7 +68,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import apiClient from '@/lib/api-client';
+import apiClient, { postWithDirectApiFallback } from '@/lib/api-client';
 import {
   type GeneratedArticle,
   generateArticleWithRouterAi,
@@ -126,6 +126,8 @@ interface PostData {
   metaDescription?: string;
   versions?: PostVersion[];
 }
+
+type GenerateImageResponse = { url: string };
 
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -268,12 +270,25 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
     setIsGenerating(true);
     try {
-      const response = await apiClient.post('/ai/generate-image', { prompt: title });
-      setValue('featuredImage', response.data.url);
+      const response = await postWithDirectApiFallback<GenerateImageResponse>(
+        '/ai/generate-image',
+        { prompt: title },
+        { timeout: 300000 },
+      );
+      setValue('featuredImage', response.url);
       toast.success(t('posts.ai_image_success'));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AI image generation error:', error);
-      toast.error(t('posts.ai_image_failed'));
+      if (isAxiosError(error)) {
+        const apiMessage = typeof error.response?.data?.message === 'string'
+          ? error.response.data.message
+          : Array.isArray(error.response?.data?.message)
+            ? error.response?.data?.message.join(', ')
+            : '';
+        toast.error(apiMessage || t('posts.ai_image_failed'));
+      } else {
+        toast.error(t('posts.ai_image_failed'));
+      }
     } finally {
       setIsGenerating(false);
     }

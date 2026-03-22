@@ -34,7 +34,7 @@ import { seoBlogPosts } from '@/lib/seo-blog-posts';
 interface Post {
   id: string;
   title: string;
-  slug: string;
+  slug?: string;
   published: boolean;
   createdAt: string;
   views: number;
@@ -65,7 +65,9 @@ export default function PostsPage() {
             ? data
             : [];
 
-      const existingSlugs = new Set(apiPosts.map((post) => post.slug));
+      const existingSlugs = new Set(
+        apiPosts.map((post) => post.slug).filter((slug): slug is string => Boolean(slug)),
+      );
       const seoPosts: Post[] = seoBlogPosts
         .filter((post) => !existingSlugs.has(post.slug))
         .map((post) => ({
@@ -317,7 +319,7 @@ export default function PostsPage() {
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" asChild title={t('posts.view_post')}>
-                            <Link href={`/blog/${post.slug}`} target="_blank">
+                            <Link href={`/blog/${post.slug || post.id}`} target="_blank">
                               <ExternalLink className="h-4 w-4" />
                             </Link>
                           </Button>

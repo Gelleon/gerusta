@@ -26,6 +26,7 @@ export async function generateArticleWithRouterAi({
   keywords,
 }: GenerateArticleParams): Promise<GeneratedArticle> {
   const userMessage = `Prompt: ${prompt}\nTopic: ${topic?.trim() || 'none'}\nKeywords: ${keywords?.trim() || 'none'}`;
+  let lastRouterError: unknown = null;
 
   try {
     const routerResponse = await apiClient.post<RouterAiChatResponse>(
@@ -43,9 +44,13 @@ export async function generateArticleWithRouterAi({
     }
     return parsedRouterArticle;
   } catch (routerError: unknown) {
-    if (isAxiosError(routerError) && routerError.response?.status === 404) {
+    lastRouterError = routerError;
+    if (!shouldUseOpenAiFallback(routerError)) {
       throw routerError;
     }
+  }
+
+  try {
     const fallbackResponse = await apiClient.post<GeneratedArticle>(
       '/ai/generate-article',
       {
@@ -55,12 +60,23 @@ export async function generateArticleWithRouterAi({
       },
     );
     return fallbackResponse.data;
+  } catch (fallbackError: unknown) {
+    if (
+      isAxiosError(fallbackError) &&
+      fallbackError.response?.status === 400 &&
+      String(fallbackError.response?.data?.message ?? '')
+        .toLowerCase()
+        .includes('openai_api_key is not configured')
+    ) {
+      throw lastRouterError ?? fallbackError;
+    }
+    throw fallbackError;
   }
 }
 
 function parseGeneratedArticle(rawContent: string): GeneratedArticle | null {
   try {
-    const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+    const parsed = safeParseArticlePayload(rawContent);
     if (
       typeof parsed !== 'object' ||
       parsed === null ||
@@ -78,4 +94,58 @@ function parseGeneratedArticle(rawContent: string): GeneratedArticle | null {
   } catch {
     return null;
   }
+}
+
+function safeParseArticlePayload(rawContent: string): unknown {
+  if (typeof rawContent !== 'string') {
+    return rawContent;
+  }
+
+  const directParsed = tryParseJson(rawContent);
+  if (directParsed !== null) {
+    return directParsed;
+  }
+
+  const codeBlockMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeBlockMatch?.[1]) {
+    const codeBlockParsed = tryParseJson(codeBlockMatch[1]);
+    if (codeBlockParsed !== null) {
+      return codeBlockParsed;
+    }
+  }
+
+  const firstBrace = rawContent.indexOf('{');
+  const lastBrace = rawContent.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    const objectSlice = rawContent.slice(firstBrace, lastBrace + 1);
+    const objectParsed = tryParseJson(objectSlice);
+    if (objectParsed !== null) {
+      return objectParsed;
+    }
+  }
+
+  throw new Error('Invalid article payload');
+}
+
+function tryParseJson(value: string): unknown | null {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function shouldUseOpenAiFallback(error: unknown): boolean {
+  if (!isAxiosError(error)) {
+    return false;
+  }
+
+  const status = error.response?.status;
+  const retryableStatuses = [408, 429, 500, 502, 503, 504];
+  if (status && retryableStatuses.includes(status)) {
+    return true;
+  }
+
+  const retryableCodes = ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'];
+  return Boolean(error.code && retryableCodes.includes(error.code));
 }

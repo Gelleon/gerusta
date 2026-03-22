@@ -26,7 +26,7 @@ type GeneratedArticle = {
 
 @Injectable()
 export class AiService {
-  private openai: OpenAI;
+  private openai: OpenAI | null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -35,13 +35,16 @@ export class AiService {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY')?.trim();
     const proxyUrl = this.configService.get<string>('HTTPS_PROXY')?.trim();
 
-    const options: any = { apiKey };
+    if (!apiKey) {
+      this.openai = null;
+      return;
+    }
 
+    const options: any = { apiKey };
     if (proxyUrl) {
       console.log('Using proxy for OpenAI:', proxyUrl);
       options.httpAgent = new HttpsProxyAgent(proxyUrl);
     }
-
     this.openai = new OpenAI(options);
   }
 
@@ -66,7 +69,8 @@ export class AiService {
       : `Topic: ${topic as string}. Keywords: ${dto.keywords?.trim() || 'none'}.`;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const openai = this.getOpenAiClientOrThrow();
+      const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           {
@@ -130,7 +134,8 @@ export class AiService {
     }
 
     try {
-      const response = await this.openai.images.generate({
+      const openai = this.getOpenAiClientOrThrow();
+      const response = await openai.images.generate({
         model: 'dall-e-3',
         prompt,
         n: 1,
@@ -193,7 +198,10 @@ export class AiService {
 
     try {
       const proxyUrl = this.configService.get<string>('HTTPS_PROXY')?.trim();
-      const axiosOptions: any = { responseType: 'arraybuffer' };
+      const axiosOptions: any = {
+        responseType: 'arraybuffer',
+        timeout: this.resolveImageDownloadTimeoutMs(),
+      };
 
       if (proxyUrl) {
         axiosOptions.httpsAgent = new HttpsProxyAgent(proxyUrl);
@@ -245,7 +253,7 @@ export class AiService {
       if (!imageUrl) {
         throw new Error('RouterAI did not return a valid image URL');
       }
-      return { url: await this.optimizeAndSaveImage(imageUrl) };
+      return { url: await this.optimizeAndSaveImageWithFallback(imageUrl) };
     } catch (err: any) {
       console.error('Error generating image with RouterAI:', err);
       const errorMessage = err.message || 'Failed to generate image';
@@ -253,6 +261,26 @@ export class AiService {
         `RouterAI Image Generation Error: ${errorMessage}`,
       );
     }
+  }
+
+  private async optimizeAndSaveImageWithFallback(url: string): Promise<string> {
+    try {
+      return await this.optimizeAndSaveImage(url);
+    } catch (error) {
+      console.error('Falling back to direct RouterAI URL:', error);
+      return url;
+    }
+  }
+
+  private resolveImageDownloadTimeoutMs(): number {
+    const rawTimeout = this.configService.get<string>(
+      'IMAGE_DOWNLOAD_TIMEOUT_MS',
+    );
+    const timeout = Number.parseInt(rawTimeout ?? '', 10);
+    if (Number.isNaN(timeout) || timeout < 5000) {
+      return 30000;
+    }
+    return timeout;
   }
 
   private normalizeGeneratedArticle(
@@ -278,5 +306,12 @@ export class AiService {
     }
 
     return { title, excerpt, content };
+  }
+
+  private getOpenAiClientOrThrow(): OpenAI {
+    if (!this.openai) {
+      throw new BadRequestException('OPENAI_API_KEY is not configured');
+    }
+    return this.openai;
   }
 }

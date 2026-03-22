@@ -35,6 +35,11 @@ export type RouterAiChatResponse = {
   choices?: RouterAiChatChoice[];
 };
 
+type RouterAiRequestOptions = {
+  timeoutMs?: number;
+  maxRetries?: number;
+};
+
 @Injectable()
 export class RouterAiClientService {
   private readonly logger = new Logger(RouterAiClientService.name);
@@ -46,18 +51,32 @@ export class RouterAiClientService {
     const normalizedPrompt = this.normalizePrompt(prompt);
     const payload: RouterAiChatRequest = {
       model: 'openai/gpt-5-image-mini',
-      messages: [{ role: 'user', content: normalizedPrompt }],
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You generate images. Return exactly one direct HTTPS image URL and nothing else.',
+        },
+        {
+          role: 'user',
+          content: this.buildImageRequestPrompt(normalizedPrompt),
+        },
+      ],
     };
-    return this.createChatCompletion(payload);
+    return this.createChatCompletion(payload, {
+      timeoutMs: this.resolveImageTimeoutMs(),
+      maxRetries: this.resolveImageMaxRetries(),
+    });
   }
 
   async createChatCompletion(
     payload: RouterAiChatRequest,
+    options: RouterAiRequestOptions = {},
   ): Promise<RouterAiChatResponse> {
     this.validatePayload(payload);
     const apiKey = this.resolveApiKey();
-    const timeoutMs = this.resolveTimeoutMs();
-    const maxRetries = this.resolveMaxRetries();
+    const timeoutMs = options.timeoutMs ?? this.resolveTimeoutMs();
+    const maxRetries = options.maxRetries ?? this.resolveMaxRetries();
     const backoffMs = this.resolveBackoffMs();
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
@@ -219,6 +238,28 @@ export class RouterAiClientService {
     return backoff;
   }
 
+  private resolveImageTimeoutMs(): number {
+    const rawTimeout = this.configService.get<string>(
+      'ROUTERAI_IMAGE_TIMEOUT_MS',
+    );
+    const timeout = Number.parseInt(rawTimeout ?? '', 10);
+    if (Number.isNaN(timeout) || timeout < 10000) {
+      return 120000;
+    }
+    return timeout;
+  }
+
+  private resolveImageMaxRetries(): number {
+    const rawMaxRetries = this.configService.get<string>(
+      'ROUTERAI_IMAGE_MAX_RETRIES',
+    );
+    const retries = Number.parseInt(rawMaxRetries ?? '', 10);
+    if (Number.isNaN(retries) || retries < 0 || retries > 5) {
+      return 1;
+    }
+    return retries;
+  }
+
   private parseAxiosError(error: unknown): {
     message: string;
     statusCode: number | null;
@@ -264,5 +305,14 @@ export class RouterAiClientService {
       return 'empty';
     }
     return content.slice(0, 200);
+  }
+
+  private buildImageRequestPrompt(prompt: string): string {
+    return [
+      'Generate an image based on the prompt below.',
+      'Return only one direct HTTPS image URL.',
+      'Do not add any explanation, markdown, JSON, or extra text.',
+      `Prompt: ${prompt}`,
+    ].join('\n');
   }
 }

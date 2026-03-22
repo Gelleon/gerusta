@@ -6,11 +6,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getImageUrl(path: string | undefined | null) {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  return `${API_URL}${path}`;
+  const normalizedPath = path?.trim();
+  if (!normalizedPath) return '';
+  const directUrlMatch = normalizedPath.match(/https?:\/\/[^\s"'<>()]+/i);
+  if (directUrlMatch?.[0]) return directUrlMatch[0];
+  if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+  if (/^data:/i.test(normalizedPath)) return normalizedPath;
+  if (normalizedPath.startsWith('//')) return `https:${normalizedPath}`;
+  if (normalizedPath.startsWith('/')) return `/api${normalizedPath}`;
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (apiUrl) {
+    return `${apiUrl.replace(/\/+$/, '')}/${normalizedPath.replace(/^\/+/, '')}`;
+  }
+
+  return `/api/${normalizedPath.replace(/^\/+/, '')}`;
 }
 
 const hasBlockHtmlPattern =

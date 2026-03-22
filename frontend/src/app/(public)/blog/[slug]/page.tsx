@@ -19,16 +19,26 @@ type ApiPost = {
 };
 
 async function getPost(slug: string): Promise<ApiPost | null> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const apiUrl = (
+    process.env.SERVER_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://127.0.0.1:3001"
+  ).replace(/\/+$/, "");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
-    const res = await fetch(`${API_URL}/blog/posts/${slug}`, {
+    const res = await fetch(`${apiUrl}/blog/posts/${slug}`, {
       next: { revalidate: 60 }, // Revalidate every minute
+      signal: controller.signal,
     });
     if (res.ok) {
       return res.json();
     }
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const fallbackPost = seoBlogPostsBySlug[slug];

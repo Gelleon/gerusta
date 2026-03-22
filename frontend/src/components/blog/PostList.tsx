@@ -10,6 +10,7 @@ import { getImageUrl } from "@/lib/utils";
 
 type Post = {
   slug: string;
+  routeSegment: string;
   title: string;
   description: string;
   featuredImage?: string;
@@ -84,14 +85,23 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
           ? (data as ApiPostsResponse).posts ?? []
           : (Array.isArray(data) ? data : []);
         
-        const newPosts = apiPosts.map((p) => ({
-          slug: p.slug,
-          title: p.title,
-          description: p.excerpt || p.content?.slice(0, 160) || '',
-          featuredImage: p.featuredImage,
-          date: p.createdAt,
-          tags: (p.tags || []).map((t) => t.name),
-        }));
+        const newPosts = apiPosts
+          .map((p) => {
+            const routeSegment = p.slug?.trim();
+            if (!routeSegment) {
+              return null;
+            }
+            return {
+              slug: routeSegment,
+              routeSegment,
+              title: p.title,
+              description: p.excerpt || p.content?.slice(0, 160) || '',
+              featuredImage: p.featuredImage,
+              date: p.createdAt,
+              tags: (p.tags || []).map((t) => t.name),
+            };
+          })
+          .filter((post): post is Post => Boolean(post));
 
         if (newPosts.length > 0) {
           setPosts((prev) => [...prev, ...newPosts]);
@@ -183,7 +193,7 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
                     ))}
                   </div>
                   <Link
-                    href={`/blog/${p.slug}`}
+                    href={`/blog/${p.routeSegment}`}
                     className="inline-flex items-center gap-3 text-tg-blue font-black uppercase tracking-widest text-sm hover:gap-4 transition-all"
                     style={{ transform: 'translateZ(15px)' }}
                   >

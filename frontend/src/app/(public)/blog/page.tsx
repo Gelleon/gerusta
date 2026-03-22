@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 };
 
 type ApiPost = {
+  id?: string;
   slug: string;
   title: string;
   excerpt?: string;
@@ -28,12 +29,38 @@ type ApiPost = {
 
 type UiPost = {
   slug: string;
+  routeSegment: string;
   title: string;
   description: string;
   featuredImage?: string;
   date: string;
   tags: string[];
 };
+
+async function fetchBlogPosts() {
+  const apiUrl = (
+    process.env.SERVER_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://127.0.0.1:3001"
+  ).replace(/\/+$/, "");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`${apiUrl}/blog/posts?take=100`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return { posts: [], total: 0 };
+    }
+    return response.json();
+  } catch {
+    return { posts: [], total: 0 };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export default async function BlogPage({
   searchParams,
@@ -42,23 +69,30 @@ export default async function BlogPage({
 }) {
   const params = await searchParams;
   const q = (params?.q || "").trim().toLowerCase();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-  const { posts: apiPosts, total } = await fetch(`${API_URL}/blog/posts?take=100`, { cache: "no-store" })
-    .then((r) => (r.ok ? r.json() : { posts: [], total: 0 }))
-    .catch(() => ({ posts: [], total: 0 }));
+  const { posts: apiPosts, total } = await fetchBlogPosts();
   
   const apiPostsArray = Array.isArray(apiPosts) ? apiPosts : [];
   
-  const posts: UiPost[] = apiPostsArray.map((p: ApiPost) => ({
-    slug: p.slug,
-    title: p.title,
-    description: p.excerpt || p.content.slice(0, 160),
-    featuredImage: p.featuredImage,
-    date: p.createdAt,
-    tags: (p.tags || []).map((t) => t.name),
-  }));
+  const posts: UiPost[] = apiPostsArray
+    .map((p: ApiPost) => {
+      const routeSegment = p.slug?.trim() || p.id?.trim() || "";
+      if (!routeSegment) {
+        return null;
+      }
+      return {
+        slug: routeSegment,
+        routeSegment,
+        title: p.title,
+        description: p.excerpt || p.content.slice(0, 160),
+        featuredImage: p.featuredImage,
+        date: p.createdAt,
+        tags: (p.tags || []).map((t) => t.name),
+      };
+    })
+    .filter((post): post is UiPost => Boolean(post));
   const staticPosts: UiPost[] = seoBlogPosts.map((post) => ({
     slug: post.slug,
+    routeSegment: post.slug,
     title: post.title,
     description: post.excerpt,
     date: post.createdAt,
@@ -85,11 +119,18 @@ export default async function BlogPage({
   const popular = [...apiPostsArray, ...seoBlogPosts]
     .sort((a, b) => (b.views || 0) - (a.views || 0))
     .slice(0, 5)
-    .map((p) => ({
-      slug: p.slug,
-      title: p.title,
-      date: p.createdAt,
-    }));
+    .map((p) => {
+      const routeSegment = p.slug?.trim() || ("id" in p ? p.id?.trim() : "") || "";
+      if (!routeSegment) {
+        return null;
+      }
+      return {
+        slug: routeSegment,
+        title: p.title,
+        date: p.createdAt,
+      };
+    })
+    .filter((post): post is { slug: string; title: string; date: string } => Boolean(post));
 
   const blogJsonLd = {
     "@context": "https://schema.org",
