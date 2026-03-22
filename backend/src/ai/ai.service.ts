@@ -27,12 +27,13 @@ type GeneratedArticle = {
 @Injectable()
 export class AiService {
   private openai: OpenAI | null;
-  private readonly articleRouterTimeoutMs = this.resolveArticleRouterTimeoutMs();
+  private readonly articleRouterTimeoutMs: number;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly routerAiClientService: RouterAiClientService,
   ) {
+    this.articleRouterTimeoutMs = this.resolveArticleRouterTimeoutMs();
     const apiKey = this.configService.get<string>('OPENAI_API_KEY')?.trim();
     const proxyUrl = this.configService.get<string>('HTTPS_PROXY')?.trim();
 
