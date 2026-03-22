@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 type ApiPost = {
   id?: string;
-  slug: string;
+  slug?: string;
   title: string;
   excerpt?: string;
   content: string;
@@ -73,13 +73,13 @@ export default async function BlogPage({
   
   const apiPostsArray = Array.isArray(apiPosts) ? apiPosts : [];
   
-  const posts: UiPost[] = apiPostsArray
-    .map((p: ApiPost) => {
-      const routeSegment = p.slug?.trim() || p.id?.trim() || "";
-      if (!routeSegment) {
-        return null;
-      }
-      return {
+  const posts: UiPost[] = apiPostsArray.flatMap((p: ApiPost): UiPost[] => {
+    const routeSegment = p.slug?.trim() || p.id?.trim() || "";
+    if (!routeSegment) {
+      return [];
+    }
+    return [
+      {
         slug: routeSegment,
         routeSegment,
         title: p.title,
@@ -87,9 +87,9 @@ export default async function BlogPage({
         featuredImage: p.featuredImage,
         date: p.createdAt,
         tags: (p.tags || []).map((t) => t.name),
-      };
-    })
-    .filter((post): post is UiPost => Boolean(post));
+      },
+    ];
+  });
   const staticPosts: UiPost[] = seoBlogPosts.map((post) => ({
     slug: post.slug,
     routeSegment: post.slug,
