@@ -4,7 +4,6 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
 import {
   GenerateContentDto,
   GenerateImageDto,
@@ -26,7 +25,6 @@ type GeneratedArticle = {
 
 @Injectable()
 export class AiService {
-  private openai: OpenAI | null;
   private readonly articleRouterTimeoutMs: number;
 
   constructor(
@@ -34,27 +32,9 @@ export class AiService {
     private readonly routerAiClientService: RouterAiClientService,
   ) {
     this.articleRouterTimeoutMs = this.resolveArticleRouterTimeoutMs();
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY')?.trim();
-    const proxyUrl = this.configService.get<string>('HTTPS_PROXY')?.trim();
-
-    if (!apiKey) {
-      this.openai = null;
-      return;
-    }
-
-    const options: any = { apiKey };
-    if (proxyUrl) {
-      console.log('Using proxy for OpenAI:', proxyUrl);
-      options.httpAgent = new HttpsProxyAgent(proxyUrl);
-    }
-    this.openai = new OpenAI(options);
   }
 
   async generateArticle(dto: GenerateContentDto) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY')?.trim();
-    if (!apiKey) {
-      throw new BadRequestException('OPENAI_API_KEY is not configured');
-    }
     const prompt = dto.prompt?.trim();
     const topic = dto.topic?.trim();
     const hasPrompt = Boolean(prompt && prompt.length >= 10);
@@ -71,9 +51,8 @@ export class AiService {
       : `Topic: ${topic as string}. Keywords: ${dto.keywords?.trim() || 'none'}.`;
 
     try {
-      const openai = this.getOpenAiClientOrThrow();
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const response = await this.routerAiClientService.createChatCompletion({
+        model: 'openai/gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -85,8 +64,7 @@ export class AiService {
             content: normalizedPrompt,
           },
         ],
-        response_format: { type: 'json_object' },
-      });
+      }, { timeoutMs: this.articleRouterTimeoutMs });
 
       const rawResult = response.choices?.[0]?.message?.content;
       if (!rawResult) {
@@ -97,14 +75,8 @@ export class AiService {
       return this.normalizeGeneratedArticle(parsed);
     } catch (err: any) {
       console.error('Error generating article:', err);
-      if (err.error) {
-        console.error(
-          'OpenAI Error Details:',
-          JSON.stringify(err.error, null, 2),
-        );
-      }
       const errorMessage =
-        err.error?.message || err.message || 'Failed to generate article';
+        err.message || 'Failed to generate article';
       throw new InternalServerErrorException(
         `AI Article Generation Error: ${errorMessage}`,
       );
@@ -119,56 +91,7 @@ export class AiService {
       );
     }
 
-    const routerApiKey = this.configService
-      .get<string>('ROUTERAI_API_KEY')
-      ?.trim();
-    if (routerApiKey) {
-      return this.generateImageWithRouterAi(prompt);
-    }
-
-    const openAiApiKey = this.configService
-      .get<string>('OPENAI_API_KEY')
-      ?.trim();
-    if (!openAiApiKey) {
-      throw new BadRequestException(
-        'ROUTERAI_API_KEY or OPENAI_API_KEY must be configured',
-      );
-    }
-
-    try {
-      const openai = this.getOpenAiClientOrThrow();
-      const response = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt,
-        n: 1,
-        size: '1024x1024',
-      });
-
-      if (!response.data || response.data.length === 0) {
-        throw new Error('No image data returned from OpenAI');
-      }
-      const imageUrl = response.data[0].url;
-      if (!imageUrl) {
-        throw new Error('Failed to generate image URL');
-      }
-      return { url: await this.optimizeAndSaveImage(imageUrl) };
-    } catch (err: any) {
-      console.error('Error generating image:', err);
-
-      // Detailed error logging to help identify region/proxy issues
-      if (err.error) {
-        console.error(
-          'OpenAI Error Details:',
-          JSON.stringify(err.error, null, 2),
-        );
-      }
-
-      const errorMessage =
-        err.error?.message || err.message || 'Failed to generate image';
-      throw new InternalServerErrorException(
-        `AI Image Generation Error: ${errorMessage}`,
-      );
-    }
+    return this.generateImageWithRouterAi(prompt);
   }
 
   async generateRouterAiChat(dto: RouterAiChatDto) {
@@ -321,12 +244,5 @@ export class AiService {
     }
 
     return { title, excerpt, content };
-  }
-
-  private getOpenAiClientOrThrow(): OpenAI {
-    if (!this.openai) {
-      throw new BadRequestException('OPENAI_API_KEY is not configured');
-    }
-    return this.openai;
   }
 }

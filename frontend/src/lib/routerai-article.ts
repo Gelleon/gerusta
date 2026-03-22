@@ -47,34 +47,20 @@ export async function generateArticleWithRouterAi({
     return parsedRouterArticle;
   } catch (routerError: unknown) {
     lastRouterError = routerError;
-    if (!shouldUseOpenAiFallback(routerError)) {
+    if (!shouldUseBackendFallback(routerError)) {
       throw routerError;
     }
   }
 
-  try {
-    const fallbackResponse = await postWithDirectApiFallback<GeneratedArticle>(
-      '/ai/generate-article',
-      {
-        prompt,
-        topic,
-        keywords,
-      },
-      { timeout: ARTICLE_REQUEST_TIMEOUT_MS },
-    );
-    return fallbackResponse;
-  } catch (fallbackError: unknown) {
-    if (
-      isAxiosError(fallbackError) &&
-      fallbackError.response?.status === 400 &&
-      String(fallbackError.response?.data?.message ?? '')
-        .toLowerCase()
-        .includes('openai_api_key is not configured')
-    ) {
-      throw lastRouterError ?? fallbackError;
-    }
-    throw fallbackError;
-  }
+  return await postWithDirectApiFallback<GeneratedArticle>(
+    '/ai/generate-article',
+    {
+      prompt,
+      topic,
+      keywords,
+    },
+    { timeout: ARTICLE_REQUEST_TIMEOUT_MS },
+  );
 }
 
 function parseGeneratedArticle(rawContent: string): GeneratedArticle | null {
@@ -145,7 +131,7 @@ function tryParseJson(value: string): unknown | null {
   }
 }
 
-function shouldUseOpenAiFallback(error: unknown): boolean {
+function shouldUseBackendFallback(error: unknown): boolean {
   if (!isAxiosError(error)) {
     return false;
   }

@@ -15,7 +15,7 @@ export type RouterAiMessage = {
 };
 
 export type RouterAiChatRequest = {
-  model: 'openai/gpt-5-image-mini';
+  model: string;
   messages: RouterAiMessage[];
 };
 
@@ -183,8 +183,8 @@ export class RouterAiClientService {
   }
 
   private validatePayload(payload: RouterAiChatRequest): void {
-    if (payload.model !== 'openai/gpt-5-image-mini') {
-      throw new BadRequestException('Unsupported model');
+    if (!payload.model || typeof payload.model !== 'string') {
+      throw new BadRequestException('Model must be specified');
     }
 
     if (!Array.isArray(payload.messages) || payload.messages.length === 0) {
