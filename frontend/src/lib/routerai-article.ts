@@ -1,5 +1,5 @@
 import { isAxiosError } from 'axios';
-import apiClient from '@/lib/api-client';
+import apiClient, { postWithDirectApiFallback } from '@/lib/api-client';
 
 export type GeneratedArticle = {
   title: string;
@@ -19,6 +19,7 @@ type GenerateArticleParams = {
 
 const SYSTEM_MESSAGE =
   'You are a professional blog writer. Return valid JSON only with keys: title, excerpt, content. title max 100 chars. excerpt max 250 chars. content min 500 words, in clean HTML with headings and paragraphs.';
+const ARTICLE_REQUEST_TIMEOUT_MS = 180000;
 
 export async function generateArticleWithRouterAi({
   prompt,
@@ -29,7 +30,7 @@ export async function generateArticleWithRouterAi({
   let lastRouterError: unknown = null;
 
   try {
-    const routerResponse = await apiClient.post<RouterAiChatResponse>(
+    const routerResponse = await postWithDirectApiFallback<RouterAiChatResponse>(
       '/ai/routerai/chat-completions',
       {
         messages: [
@@ -37,8 +38,9 @@ export async function generateArticleWithRouterAi({
           { role: 'user', content: userMessage },
         ],
       },
+      { timeout: ARTICLE_REQUEST_TIMEOUT_MS },
     );
-    const parsedRouterArticle = parseGeneratedArticle(routerResponse.data.content);
+    const parsedRouterArticle = parseGeneratedArticle(routerResponse.content);
     if (!parsedRouterArticle) {
       throw new Error('Invalid RouterAI response format');
     }
@@ -51,15 +53,16 @@ export async function generateArticleWithRouterAi({
   }
 
   try {
-    const fallbackResponse = await apiClient.post<GeneratedArticle>(
+    const fallbackResponse = await postWithDirectApiFallback<GeneratedArticle>(
       '/ai/generate-article',
       {
         prompt,
         topic,
         keywords,
       },
+      { timeout: ARTICLE_REQUEST_TIMEOUT_MS },
     );
-    return fallbackResponse.data;
+    return fallbackResponse;
   } catch (fallbackError: unknown) {
     if (
       isAxiosError(fallbackError) &&

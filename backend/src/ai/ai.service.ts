@@ -27,6 +27,7 @@ type GeneratedArticle = {
 @Injectable()
 export class AiService {
   private openai: OpenAI | null;
+  private readonly articleRouterTimeoutMs = this.resolveArticleRouterTimeoutMs();
 
   constructor(
     private readonly configService: ConfigService,
@@ -176,6 +177,8 @@ export class AiService {
         role: message.role,
         content: message.content,
       })),
+    }, {
+      timeoutMs: this.articleRouterTimeoutMs,
     });
     const content = response.choices?.[0]?.message?.content;
     if (!content) {
@@ -279,6 +282,17 @@ export class AiService {
     const timeout = Number.parseInt(rawTimeout ?? '', 10);
     if (Number.isNaN(timeout) || timeout < 5000) {
       return 30000;
+    }
+    return timeout;
+  }
+
+  private resolveArticleRouterTimeoutMs(): number {
+    const rawTimeout = this.configService.get<string>(
+      'ROUTERAI_ARTICLE_TIMEOUT_MS',
+    );
+    const timeout = Number.parseInt(rawTimeout ?? '', 10);
+    if (Number.isNaN(timeout) || timeout < 10000) {
+      return 120000;
     }
     return timeout;
   }
