@@ -43,8 +43,61 @@ Required variables:
 
 - `ADMIN_LOGIN`
 - `ADMIN_PASSWORD`
+- `ROUTERAI_API_KEY` for RouterAI chat completions
+
+Optional RouterAI tuning variables:
+
+- `ROUTERAI_TIMEOUT_MS` request timeout in milliseconds (default `30000`)
+- `ROUTERAI_MAX_RETRIES` retry count for `429/5xx` and network errors (default `2`)
+- `ROUTERAI_RETRY_DELAY_MS` base retry delay in milliseconds (default `500`)
 
 Seed uses these variables to create or update the admin user.
+
+## RouterAI integration
+
+RouterAI endpoint is integrated in AI module through:
+
+- `POST /ai/routerai/chat-completions` for direct chat completion calls
+- `POST /ai/generate-image` with automatic RouterAI usage when `ROUTERAI_API_KEY` is set
+
+Request payload format:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Create a high-detail hero image for a fintech landing page"
+    }
+  ]
+}
+```
+
+Example cURL request:
+
+```bash
+curl --request POST \
+  --url https://routerai.ru/api/v1/chat/completions \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "model": "openai/gpt-5-image-mini",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Create a high-detail hero image for a fintech landing page"
+      }
+    ]
+  }'
+```
+
+Implementation includes:
+
+- input validation for model, message roles, and content length
+- retry with exponential backoff for transient failures
+- structured logging for request lifecycle and response preview
+- secure API key loading through environment variables
+- image URL extraction from completion response for downstream processing
 
 ## Compile and run the project
 
@@ -71,6 +124,15 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
+
+Targeted tests for RouterAI integration:
+
+```bash
+$ npm run test -- src/ai/routerai-client.service.spec.ts
+$ npm run test -- src/ai/routerai-client.integration.spec.ts
+```
+
+Integration test executes only when `ROUTERAI_API_KEY` is available in environment.
 
 ## Admin auth check
 

@@ -5,19 +5,33 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { GenerateContentDto, GenerateImageDto } from './dto/ai.dto';
+import {
+  GenerateContentDto,
+  GenerateImageDto,
+  RouterAiChatDto,
+} from './dto/ai.dto';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { RouterAiClientService } from './routerai-client.service';
+
+type GeneratedArticle = {
+  title: string;
+  excerpt: string;
+  content: string;
+};
 
 @Injectable()
 export class AiService {
   private openai: OpenAI;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly routerAiClientService: RouterAiClientService,
+  ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY')?.trim();
     const proxyUrl = this.configService.get<string>('HTTPS_PROXY')?.trim();
 
@@ -36,6 +50,21 @@ export class AiService {
     if (!apiKey) {
       throw new BadRequestException('OPENAI_API_KEY is not configured');
     }
+    const prompt = dto.prompt?.trim();
+    const topic = dto.topic?.trim();
+    const hasPrompt = Boolean(prompt && prompt.length >= 10);
+    const hasTopic = Boolean(topic && topic.length >= 3);
+
+    if (!hasPrompt && !hasTopic) {
+      throw new BadRequestException(
+        'Provide a prompt (min 10 chars) or topic (min 3 chars)',
+      );
+    }
+
+    const normalizedPrompt: string = hasPrompt
+      ? (prompt as string)
+      : `Topic: ${topic as string}. Keywords: ${dto.keywords?.trim() || 'none'}.`;
+
     try {
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -43,19 +72,23 @@ export class AiService {
           {
             role: 'system',
             content:
-              'You are a professional blog writer. Write a detailed, SEO-friendly article in HTML format. Include a title, excerpt, and full content.',
+              'You are a professional blog writer. Return valid JSON only with keys: title, excerpt, content. title max 100 chars. excerpt max 250 chars. content min 500 words, in clean HTML with headings and paragraphs.',
           },
           {
             role: 'user',
-            content: `Topic: ${dto.topic}. Keywords: ${dto.keywords || 'none'}.`,
+            content: normalizedPrompt,
           },
         ],
+        response_format: { type: 'json_object' },
       });
-      const content = response.choices?.[0]?.message?.content;
-      if (!content) {
+
+      const rawResult = response.choices?.[0]?.message?.content;
+      if (!rawResult) {
         throw new InternalServerErrorException('AI returned empty content');
       }
-      return content;
+
+      const parsed = this.parseGeneratedArticle(rawResult);
+      return this.normalizeGeneratedArticle(parsed);
     } catch (err: any) {
       console.error('Error generating article:', err);
       if (err.error) {
@@ -73,15 +106,33 @@ export class AiService {
   }
 
   async generateImage(dto: GenerateImageDto) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY')?.trim();
-    if (!apiKey) {
-      throw new BadRequestException('OPENAI_API_KEY is not configured');
+    const prompt = dto.prompt?.trim();
+    if (!prompt || prompt.length < 5) {
+      throw new BadRequestException(
+        'Prompt is required and must contain at least 5 characters',
+      );
+    }
+
+    const routerApiKey = this.configService
+      .get<string>('ROUTERAI_API_KEY')
+      ?.trim();
+    if (routerApiKey) {
+      return this.generateImageWithRouterAi(prompt);
+    }
+
+    const openAiApiKey = this.configService
+      .get<string>('OPENAI_API_KEY')
+      ?.trim();
+    if (!openAiApiKey) {
+      throw new BadRequestException(
+        'ROUTERAI_API_KEY or OPENAI_API_KEY must be configured',
+      );
     }
 
     try {
       const response = await this.openai.images.generate({
         model: 'dall-e-3',
-        prompt: dto.prompt,
+        prompt,
         n: 1,
         size: '1024x1024',
       });
@@ -113,6 +164,25 @@ export class AiService {
     }
   }
 
+  async generateRouterAiChat(dto: RouterAiChatDto) {
+    const response = await this.routerAiClientService.createChatCompletion({
+      model: 'openai/gpt-5-image-mini',
+      messages: dto.messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+    });
+    const content = response.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new InternalServerErrorException('RouterAI returned empty content');
+    }
+    return {
+      model: response.model,
+      id: response.id,
+      content,
+    };
+  }
+
   private async optimizeAndSaveImage(url: string) {
     const filename = `${uuidv4()}.webp`;
     const uploadDir = path.join(process.cwd(), 'uploads');
@@ -141,5 +211,72 @@ export class AiService {
       console.error('Error optimizing image:', err);
       throw new InternalServerErrorException('Failed to save generated image');
     }
+  }
+
+  private parseGeneratedArticle(raw: string): GeneratedArticle {
+    try {
+      const parsed = JSON.parse(raw);
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        typeof parsed.title !== 'string' ||
+        typeof parsed.excerpt !== 'string' ||
+        typeof parsed.content !== 'string'
+      ) {
+        throw new Error('Invalid AI response shape');
+      }
+      return {
+        title: parsed.title,
+        excerpt: parsed.excerpt,
+        content: parsed.content,
+      };
+    } catch {
+      throw new InternalServerErrorException(
+        'AI returned invalid JSON response for article generation',
+      );
+    }
+  }
+
+  private async generateImageWithRouterAi(prompt: string) {
+    try {
+      const response =
+        await this.routerAiClientService.createImageCompletion(prompt);
+      const imageUrl = this.routerAiClientService.extractImageUrl(response);
+      if (!imageUrl) {
+        throw new Error('RouterAI did not return a valid image URL');
+      }
+      return { url: await this.optimizeAndSaveImage(imageUrl) };
+    } catch (err: any) {
+      console.error('Error generating image with RouterAI:', err);
+      const errorMessage = err.message || 'Failed to generate image';
+      throw new InternalServerErrorException(
+        `RouterAI Image Generation Error: ${errorMessage}`,
+      );
+    }
+  }
+
+  private normalizeGeneratedArticle(
+    article: GeneratedArticle,
+  ): GeneratedArticle {
+    const title = article.title.trim().slice(0, 100);
+    const excerpt = article.excerpt.trim().slice(0, 250);
+    const content = article.content.trim();
+
+    if (!title) {
+      throw new InternalServerErrorException('AI returned empty title');
+    }
+
+    if (!excerpt) {
+      throw new InternalServerErrorException('AI returned empty excerpt');
+    }
+
+    const wordsCount = content.split(/\s+/).filter(Boolean).length;
+    if (wordsCount < 500) {
+      throw new InternalServerErrorException(
+        'AI returned content shorter than 500 words',
+      );
+    }
+
+    return { title, excerpt, content };
   }
 }

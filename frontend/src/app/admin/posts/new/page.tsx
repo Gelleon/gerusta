@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { isAxiosError } from 'axios';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -38,7 +39,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import apiClient from '@/lib/api-client';
+import {
+  type GeneratedArticle,
+  generateArticleWithRouterAi,
+} from '@/lib/routerai-article';
 import { seoBlogPostsBySlug } from '@/lib/seo-blog-posts';
 
 const postSchema = z.object({
@@ -63,6 +76,9 @@ export default function NewPostPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [hasGeneratedAi, setHasGeneratedAi] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -120,29 +136,57 @@ export default function NewPostPage() {
     toast.success('SEO-статья загружена в редактор. Сохранение создаст новую запись в БД.');
   }, [categories, form, searchParams]);
 
-  const generateAIContent = async () => {
-    const title = form.getValues('title');
-    if (!title || title.length < 5) {
-      toast.error(t('posts.title_required_ai'));
+  const generateAIContent = async (prompt: string) => {
+    const parsedPrompt = z.string().trim().min(10).max(2000).safeParse(prompt);
+    if (!parsedPrompt.success) {
+      toast.error(t('posts.ai_prompt_validation'));
       return;
     }
 
     setIsGeneratingContent(true);
     try {
-      const response = await apiClient.post('/ai/generate-article', { 
-        topic: title,
-        keywords: form.getValues('tags')?.join(', ')
+      const article: GeneratedArticle = await generateArticleWithRouterAi({
+        prompt: parsedPrompt.data,
+        topic: form.getValues('title'),
+        keywords: form.getValues('tags')?.join(', '),
       });
-      
-      const content = response.data;
-      form.setValue('content', content);
+      form.setValue('title', article.title);
+      form.setValue('excerpt', article.excerpt);
+      form.setValue('content', article.content);
+      if (!form.getValues('metaTitle')) {
+        form.setValue('metaTitle', article.title);
+      }
+      if (!form.getValues('metaDescription')) {
+        form.setValue('metaDescription', article.excerpt);
+      }
+      setHasGeneratedAi(true);
       toast.success(t('posts.ai_content_success'));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating AI content:', error);
-      toast.error(t('posts.ai_content_failed'));
+      if (isAxiosError(error)) {
+        const apiMessage = typeof error.response?.data?.message === 'string'
+          ? error.response.data.message
+          : Array.isArray(error.response?.data?.message)
+            ? error.response?.data?.message.join(', ')
+            : '';
+        toast.error(apiMessage || t('posts.ai_content_failed'));
+      } else {
+        toast.error(t('posts.ai_content_failed'));
+      }
     } finally {
       setIsGeneratingContent(false);
     }
+  };
+
+  const openAiDialog = () => {
+    const currentTitle = form.getValues('title')?.trim();
+    const currentTags = form.getValues('tags') || [];
+    if (!aiPrompt) {
+      setAiPrompt(
+        `Тема: ${currentTitle || 'Новая статья'}. Ключевые слова: ${currentTags.join(', ') || 'без тегов'}. Целевая аудитория: предприниматели и руководители. Тон: экспертный, практичный.`,
+      );
+    }
+    setIsAiDialogOpen(true);
   };
 
   const generateAIImage = async () => {
@@ -312,7 +356,7 @@ export default function NewPostPage() {
                             variant="outline" 
                             size="sm" 
                             className="rounded-xl text-indigo-600 border-indigo-100 bg-indigo-50 hover:bg-indigo-100 transition-all duration-300 group"
-                            onClick={generateAIContent}
+                            onClick={openAiDialog}
                             disabled={isGeneratingContent}
                           >
                             {isGeneratingContent ? (
@@ -341,6 +385,40 @@ export default function NewPostPage() {
                           )}
                         />
                       </div>
+
+                      <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+                        <DialogContent className="sm:max-w-xl rounded-2xl">
+                          <DialogHeader>
+                            <DialogTitle>{t('posts.ai_write_helper')}</DialogTitle>
+                            <DialogDescription>{t('posts.ai_prompt_description')}</DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-2">
+                            <FormLabel>{t('posts.ai_prompt_label')}</FormLabel>
+                            <textarea
+                              value={aiPrompt}
+                              onChange={(event) => setAiPrompt(event.target.value)}
+                              placeholder={t('posts.ai_prompt_placeholder')}
+                              className="flex min-h-[180px] w-full rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none resize-y"
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => void generateAIContent(aiPrompt)}
+                              disabled={isGeneratingContent}
+                              className="rounded-xl"
+                            >
+                              {isGeneratingContent ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-4 w-4 mr-2" />
+                              )}
+                              {hasGeneratedAi ? t('posts.ai_regenerate') : t('posts.ai_generate')}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </TabsContent>
 
                     <TabsContent value="seo" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">

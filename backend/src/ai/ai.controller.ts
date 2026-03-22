@@ -1,6 +1,10 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { AiService } from './ai.service';
-import { GenerateContentDto, GenerateImageDto } from './dto/ai.dto';
+import {
+  GenerateContentDto,
+  GenerateImageDto,
+  RouterAiChatDto,
+} from './dto/ai.dto';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('ai')
@@ -16,5 +20,10 @@ export class AiController {
   @Post('generate-image')
   async generateImage(@Body() dto: GenerateImageDto) {
     return this.aiService.generateImage(dto);
+  }
+
+  @Post('routerai/chat-completions')
+  async generateRouterAiChat(@Body() dto: RouterAiChatDto) {
+    return this.aiService.generateRouterAiChat(dto);
   }
 }

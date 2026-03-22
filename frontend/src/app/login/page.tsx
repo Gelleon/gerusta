@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { isAxiosError } from 'axios';
 import type { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -57,6 +58,10 @@ export default function LoginPage() {
       toast.success('Successfully logged in!');
       router.push('/admin');
     } catch (error: unknown) {
+      if (isAxiosError(error) && error.code === 'ERR_NETWORK') {
+        toast.error('Cannot reach auth server. Make sure backend is running.');
+        return;
+      }
       const errorMessage = (error as AxiosError<ApiErrorData>).response?.data?.message;
       console.error('Login error:', error);
       toast.error(errorMessage || 'Login failed. Please check your credentials.');

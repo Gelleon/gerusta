@@ -2,18 +2,48 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { LoginDto, RegisterDto, UpdateProfileDto } from './dto/auth.dto';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
+
+  async onModuleInit() {
+    const adminLogin = this.configService.get<string>('ADMIN_LOGIN')?.trim();
+    const adminPasswordRaw = this.configService
+      .get<string>('ADMIN_PASSWORD')
+      ?.trim();
+
+    if (!adminLogin || !adminPasswordRaw) {
+      return;
+    }
+
+    const adminPassword = await bcrypt.hash(adminPasswordRaw, 10);
+    await this.prisma.user.upsert({
+      where: { email: adminLogin },
+      update: {
+        password: adminPassword,
+        name: 'Gerusta Admin',
+        role: 'ADMIN',
+      },
+      create: {
+        email: adminLogin,
+        password: adminPassword,
+        name: 'Gerusta Admin',
+        role: 'ADMIN',
+      },
+    });
+  }
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.prisma.user.findUnique({ where: { email } });

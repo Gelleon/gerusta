@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
+import { isAxiosError } from 'axios';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -68,6 +69,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import apiClient from '@/lib/api-client';
+import {
+  type GeneratedArticle,
+  generateArticleWithRouterAi,
+} from '@/lib/routerai-article';
 
 const postSchema = z.object({
   title: z.string(),
@@ -228,15 +233,27 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
     setIsGenerating(true);
     try {
-      const response = await apiClient.post('/ai/generate-article', { 
+      const article: GeneratedArticle = await generateArticleWithRouterAi({
+        prompt: `Улучши пост на тему "${title}". ${watch('content') || ''}`,
         topic: title,
-        keywords: selectedTags.join(', ')
+        keywords: selectedTags.join(', '),
       });
-      setValue('content', response.data);
+      setValue('title', article.title);
+      setValue('excerpt', article.excerpt);
+      setValue('content', article.content);
       toast.success(t('posts.ai_content_success'));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AI generation error:', error);
-      toast.error(t('posts.ai_content_failed'));
+      if (isAxiosError(error)) {
+        const apiMessage = typeof error.response?.data?.message === 'string'
+          ? error.response.data.message
+          : Array.isArray(error.response?.data?.message)
+            ? error.response?.data?.message.join(', ')
+            : '';
+        toast.error(apiMessage || t('posts.ai_content_failed'));
+      } else {
+        toast.error(t('posts.ai_content_failed'));
+      }
     } finally {
       setIsGenerating(false);
     }
