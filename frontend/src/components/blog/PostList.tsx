@@ -23,7 +23,8 @@ type ApiTag = {
 };
 
 type ApiPost = {
-  slug: string;
+  id?: string;
+  slug?: string;
   title: string;
   excerpt?: string;
   content?: string;
@@ -85,13 +86,13 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
           ? (data as ApiPostsResponse).posts ?? []
           : (Array.isArray(data) ? data : []);
         
-        const newPosts = apiPosts
-          .map((p) => {
-            const routeSegment = p.slug?.trim();
-            if (!routeSegment) {
-              return null;
-            }
-            return {
+        const newPosts = apiPosts.flatMap((p): Post[] => {
+          const routeSegment = p.slug?.trim() || p.id?.trim() || "";
+          if (!routeSegment) {
+            return [];
+          }
+          return [
+            {
               slug: routeSegment,
               routeSegment,
               title: p.title,
@@ -99,9 +100,9 @@ export function PostList({ initialPosts, initialTotal, q }: PostListProps) {
               featuredImage: p.featuredImage,
               date: p.createdAt,
               tags: (p.tags || []).map((t) => t.name),
-            };
-          })
-          .filter((post): post is Post => Boolean(post));
+            },
+          ];
+        });
 
         if (newPosts.length > 0) {
           setPosts((prev) => [...prev, ...newPosts]);
