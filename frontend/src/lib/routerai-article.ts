@@ -77,13 +77,7 @@ export async function generateArticleWithRouterAi({
 function parseGeneratedArticle(rawContent: string): GeneratedArticle | null {
   try {
     const parsed = safeParseArticlePayload(rawContent);
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      typeof parsed.title !== 'string' ||
-      typeof parsed.excerpt !== 'string' ||
-      typeof parsed.content !== 'string'
-    ) {
+    if (!isGeneratedArticlePayload(parsed)) {
       return null;
     }
     return {
@@ -94,6 +88,19 @@ function parseGeneratedArticle(rawContent: string): GeneratedArticle | null {
   } catch {
     return null;
   }
+}
+
+function isGeneratedArticlePayload(value: unknown): value is GeneratedArticle {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.title === 'string' &&
+    typeof candidate.excerpt === 'string' &&
+    typeof candidate.content === 'string'
+  );
 }
 
 function safeParseArticlePayload(rawContent: string): unknown {
