@@ -174,9 +174,8 @@ export class AiService {
 
   private async generateImageWithRouterAi(prompt: string) {
     try {
-      const response =
-        await this.routerAiClientService.createImageCompletion(prompt);
-      const imageUrl = this.routerAiClientService.extractImageUrl(response);
+      const imageUrl = await this.routerAiClientService.createImageCompletion(prompt);
+      
       if (!imageUrl) {
         throw new Error('RouterAI did not return a valid image URL');
       }
@@ -194,8 +193,8 @@ export class AiService {
     try {
       return await this.optimizeAndSaveImage(url);
     } catch (error) {
-      console.error('Falling back to direct RouterAI URL:', error);
-      return url;
+      console.error('Failed to download/optimize image from URL:', url, error);
+      throw new InternalServerErrorException('Failed to process generated image URL');
     }
   }
 
