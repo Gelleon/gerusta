@@ -50,15 +50,11 @@ export class RouterAiClientService {
 
   async createImageCompletion(prompt: string): Promise<string> {
     const normalizedPrompt = this.normalizePrompt(prompt);
-    const model = this.configService.get<string>('ROUTERAI_IMAGE_MODEL') || 'dall-e-3';
+    const model = this.configService.get<string>('ROUTERAI_IMAGE_MODEL') || 'openai/gpt-5-image-mini';
     
     const payload: RouterAiChatRequest = {
       model,
       messages: [
-        {
-          role: 'system',
-          content: 'You generate images. Return exactly one direct HTTPS image URL in markdown format or as plain text.',
-        },
         {
           role: 'user',
           content: normalizedPrompt,
@@ -124,7 +120,7 @@ export class RouterAiClientService {
         const parsedError = this.parseAxiosError(error);
         const shouldRetry = this.isRetryableError(parsedError.statusCode);
         this.logger.error(
-          `RouterAI request failed attempt=${attemptNumber} status=${parsedError.statusCode ?? 'network'} message=${parsedError.message}`,
+          `RouterAI request failed attempt=${attemptNumber} status=${parsedError.statusCode ?? 'network'} message=${parsedError.message} data=${JSON.stringify((error as any)?.response?.data || {})}`,
         );
 
         if (!shouldRetry || attempt === maxRetries) {
