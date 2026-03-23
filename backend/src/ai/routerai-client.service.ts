@@ -35,6 +35,21 @@ export type RouterAiChatResponse = {
   choices?: RouterAiChatChoice[];
 };
 
+export type RouterAiImageRequest = {
+  model: string;
+  prompt: string;
+  n?: number;
+  size?: string;
+};
+
+export type RouterAiImageResponse = {
+  created?: number;
+  data?: {
+    url?: string;
+    b64_json?: string;
+  }[];
+};
+
 type RouterAiRequestOptions = {
   timeoutMs?: number;
   maxRetries?: number;
@@ -44,29 +59,73 @@ type RouterAiRequestOptions = {
 export class RouterAiClientService {
   private readonly logger = new Logger(RouterAiClientService.name);
   private readonly endpoint = 'https://routerai.ru/api/v1/chat/completions';
+  private readonly imageEndpoint = 'https://routerai.ru/api/v1/images/generations';
 
   constructor(private readonly configService: ConfigService) {}
 
-  async createImageCompletion(prompt: string): Promise<RouterAiChatResponse> {
+  async createImageCompletion(prompt: string): Promise<RouterAiImageResponse> {
     const normalizedPrompt = this.normalizePrompt(prompt);
-    const payload: RouterAiChatRequest = {
-      model: 'openai/gpt-5-image-mini',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You generate images. Return exactly one direct HTTPS image URL and nothing else.',
-        },
-        {
-          role: 'user',
-          content: this.buildImageRequestPrompt(normalizedPrompt),
-        },
-      ],
+    const model = this.configService.get<string>('ROUTERAI_IMAGE_MODEL') || 'dall-e-3';
+    const payload: RouterAiImageRequest = {
+      model,
+      prompt: normalizedPrompt,
+      n: 1,
+      size: '1024x1024',
     };
-    return this.createChatCompletion(payload, {
+    
+    return this.createImageGeneration(payload, {
       timeoutMs: this.resolveImageTimeoutMs(),
       maxRetries: this.resolveImageMaxRetries(),
     });
+  }
+
+  async createImageGeneration(
+    payload: RouterAiImageRequest,
+    options: RouterAiRequestOptions = {},
+  ): Promise<RouterAiImageResponse> {
+    const apiKey = this.resolveApiKey();
+    const timeoutMs = options.timeoutMs ?? this.resolveTimeoutMs();
+    const maxRetries = options.maxRetries ?? this.resolveMaxRetries();
+    const backoffMs = this.resolveBackoffMs();
+
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      const attemptNumber = attempt + 1;
+      try {
+        this.logger.log(
+          `RouterAI image request started attempt=${attemptNumber} model=${payload.model}`,
+        );
+        const response = await axios.post<RouterAiImageResponse>(
+          this.imageEndpoint,
+          payload,
+          {
+            timeout: timeoutMs,
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+          },
+        );
+        this.logger.log(
+          `RouterAI image request completed attempt=${attemptNumber} status=${response.status}`,
+        );
+        return response.data;
+      } catch (error: unknown) {
+        const parsedError = this.parseAxiosError(error);
+        const shouldRetry = this.isRetryableError(parsedError.statusCode);
+        this.logger.error(
+          `RouterAI image request failed attempt=${attemptNumber} status=${parsedError.statusCode ?? 'network'} message=${parsedError.message}`,
+        );
+
+        if (!shouldRetry || attempt === maxRetries) {
+          throw new InternalServerErrorException(
+            `RouterAI image request failed: ${parsedError.message}`,
+          );
+        }
+        await this.sleep(backoffMs * 2 ** attempt);
+      }
+    }
+
+    throw new InternalServerErrorException('RouterAI image request failed');
   }
 
   async createChatCompletion(
@@ -122,32 +181,17 @@ export class RouterAiClientService {
     throw new InternalServerErrorException('RouterAI request failed');
   }
 
-  extractImageUrl(response: RouterAiChatResponse): string | null {
-    const content = response.choices?.[0]?.message?.content;
-    this.logger.log(`RouterAI image response content: ${content}`);
-    if (!content) {
+  extractImageUrl(response: RouterAiImageResponse): string | null {
+    const url = response.data?.[0]?.url;
+    this.logger.log(`RouterAI image response URL: ${url}`);
+    
+    if (!url) {
       return null;
     }
 
-    const directUrl = this.extractUrlFromString(content);
+    const directUrl = this.extractUrlFromString(url);
     if (directUrl) {
       return directUrl;
-    }
-
-    try {
-      const parsed = JSON.parse(content) as Record<string, unknown>;
-      const candidates = [parsed.image_url, parsed.url, parsed.image].filter(
-        (value): value is string => typeof value === 'string',
-      );
-
-      for (const candidate of candidates) {
-        const parsedUrl = this.extractUrlFromString(candidate);
-        if (parsedUrl) {
-          return parsedUrl;
-        }
-      }
-    } catch {
-      return null;
     }
 
     return null;
