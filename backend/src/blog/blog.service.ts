@@ -225,17 +225,20 @@ export class BlogService {
 
     this.logger.log(`Updating post ${id}: ${currentPost.title}`);
 
+    // Update tags relationship properly
+    const tagsUpdate = tags ? {
+      set: [],
+      connectOrCreate: tags.map((tag) => ({
+        where: { name: tag },
+        create: { name: tag, slug: this.slugify(tag) },
+      })),
+    } : undefined;
+
     return this.prisma.post.update({
       where: { id },
       data: {
         ...postData,
-        tags: {
-          set: [],
-          connectOrCreate: tags?.map((tag) => ({
-            where: { name: tag },
-            create: { name: tag, slug: this.slugify(tag) },
-          })),
-        },
+        ...(tagsUpdate && { tags: tagsUpdate }),
       },
       include: { tags: true, category: true },
     });
