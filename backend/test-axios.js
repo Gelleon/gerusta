@@ -5,20 +5,13 @@ const path = require('path');
 
 async function run() {
   const apiKey = 'sk-fCHw5XjJraKOovzTtwHTrr64KGBO13l6';
-  const endpoint = 'https://routerai.ru/api/v1/chat/completions';
+  const endpoint = 'https://routerai.ru/api/v1/images/generations';
   
   const payload = {
-    model: 'openai/gpt-5-image-mini',
-    messages: [
-      {
-        role: 'system',
-        content: 'You generate images. Return exactly one direct HTTPS image URL and nothing else.',
-      },
-      {
-        role: 'user',
-        content: 'Generate an image: Beautiful sunset over the ocean',
-      },
-    ],
+    model: 'dall-e-3',
+    prompt: 'Beautiful sunset over the ocean',
+    n: 1,
+    size: '1024x1024'
   };
 
   console.log('Testing image generation...');
