@@ -224,9 +224,16 @@ export default function NewPostPage() {
   };
 
   const onSubmit: SubmitHandler<PostFormValues> = async (values) => {
+    const payload = {
+      ...values,
+      published: values.published === true,
+      categoryId: values.categoryId || undefined,
+      scheduledAt: values.scheduledAt || undefined,
+      tags: Array.isArray(values.tags) ? values.tags.filter(Boolean) : [],
+    };
     setIsSaving(true);
     try {
-      await apiClient.post('/blog/posts', values);
+      await apiClient.post('/blog/posts', payload);
       toast.success(t('posts.create_success'));
       router.push('/admin/posts');
     } catch (error) {
@@ -685,8 +692,8 @@ export default function NewPostPage() {
                           </div>
                           <FormControl>
                             <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
+                              checked={!!field.value}
+                              onCheckedChange={(checked) => field.onChange(checked === true)}
                               className="rounded-md border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                             />
                           </FormControl>

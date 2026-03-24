@@ -200,9 +200,16 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   }, [resolvedParams.id, reset, router, t]);
 
   const onSubmit: SubmitHandler<PostFormValues> = async (values) => {
+    const payload = {
+      ...values,
+      published: values.published === true,
+      categoryId: values.categoryId || undefined,
+      scheduledAt: values.scheduledAt || undefined,
+      tags: Array.isArray(values.tags) ? values.tags.filter(Boolean) : [],
+    };
     setIsSaving(true);
     try {
-      const response = await apiClient.put(`/blog/posts/${resolvedParams.id}`, values);
+      const response = await apiClient.put(`/blog/posts/${resolvedParams.id}`, payload);
       setPost(response.data);
       toast.success(t('posts.update_success'));
       // No redirect, allow continuous editing
@@ -708,8 +715,8 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           </div>
                           <FormControl>
                             <Checkbox 
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
+                              checked={!!field.value}
+                              onCheckedChange={(checked) => field.onChange(checked === true)}
                               className="h-6 w-6 rounded-lg border-indigo-200 data-[state=checked]:bg-indigo-600 transition-all"
                             />
                           </FormControl>

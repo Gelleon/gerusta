@@ -206,6 +206,13 @@ export class BlogService {
     if (currentPost.deleted)
       throw new BadRequestException('Cannot update deleted post');
 
+    if (postData.categoryId === '') {
+      delete (postData as any).categoryId;
+    }
+    if ((postData as any).scheduledAt === '') {
+      (postData as any).scheduledAt = null;
+    }
+
     if (postData.scheduledAt && new Date(postData.scheduledAt) < new Date()) {
       throw new BadRequestException('Scheduled date must be in the future');
     }
