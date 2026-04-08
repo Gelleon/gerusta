@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/generate-favicon.cjs",
     "build": "next build",
+    "prestart": "node scripts/generate-favicon.cjs",
     "start": "next start -H 0.0.0.0",
     "test": "vitest",
     "lint": "eslint"
@@ -32,8 +34,10 @@
     "react-i18next": "^16.5.4",
     "shadcn-ui": "^0.9.5",
     "sonner": "^2.0.7",
+    "sharp": "^0.34.3",
     "tailwind-merge": "^3.5.0",
     "three": "^0.183.2",
+    "to-ico": "^1.1.5",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },
