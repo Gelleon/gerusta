@@ -3,7 +3,7 @@ import { seoPageSlugs } from "@/lib/seo-pages";
 import { seoBlogPosts } from "@/lib/seo-blog-posts";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://gerusta.ru";
   const fallbackLastModified = new Date();
 
   const staticPages = [

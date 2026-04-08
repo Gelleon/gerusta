@@ -140,7 +140,7 @@ export default async function BlogPage({
       "@type": "BlogPosting",
       headline: p.title,
       datePublished: p.date,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/blog/${p.slug}`,
+      url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://gerusta.ru"}/blog/${p.slug}`,
     })),
   };
 

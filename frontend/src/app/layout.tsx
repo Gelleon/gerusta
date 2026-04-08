@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://gerusta.ru"),
   title: {
     default: "Gerusta — Telegram Bot Studio и Mini Apps",
     template: "%s | Gerusta",
@@ -53,8 +53,11 @@ export const metadata: Metadata = {
       "Премиальная разработка Telegram-ботов и Mini Apps для бизнеса. Интеграции, оплаты, CRM и поддержка.",
   },
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    shortcut: ["/icon.svg"],
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: ["/favicon.ico"],
     apple: [{ url: "/apple-touch-icon.svg", type: "image/svg+xml" }],
   },
   robots: {
